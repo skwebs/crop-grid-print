@@ -1,0 +1,4002 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  >
+
+  <title>RC Crop Print</title>
+
+
+  <!-- ======================================================
+       TAILWIND CSS v4
+       ====================================================== -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+
+  <!-- ======================================================
+       CROPPER.JS
+       ====================================================== -->
+
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css"
+  >
+
+
+  <style>
+
+    /* ======================================================
+       BASE
+       ====================================================== */
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+
+      overflow: hidden;
+
+      background: #d1d5db;
+
+      overscroll-behavior: none;
+    }
+
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+
+    button,
+    input,
+    select {
+      font-family: inherit;
+    }
+
+
+    button {
+      line-height: 1;
+    }
+
+
+    input,
+    select {
+      line-height: 1;
+    }
+
+
+    /* ======================================================
+       APP
+       ====================================================== */
+
+    #app {
+      position: fixed;
+
+      inset: 0;
+
+      width: 100%;
+      height: 100dvh;
+
+      overflow: hidden;
+    }
+
+
+    /* ======================================================
+       VIEWPORT
+       ====================================================== */
+
+    #viewport {
+      position: absolute;
+
+      inset: 0;
+
+      overflow: hidden;
+
+      background: #d1d5db;
+
+      cursor: grab;
+
+      touch-action: none;
+
+      user-select: none;
+
+      overscroll-behavior: none;
+    }
+
+
+    #viewport.dragging {
+      cursor: grabbing;
+    }
+
+
+    #viewportCanvas {
+      display: block;
+
+      width: 100%;
+      height: 100%;
+
+      touch-action: none;
+    }
+
+
+    /* ======================================================
+       HIDE UI DURING CANVAS INTERACTION
+       ====================================================== */
+
+    #app.canvas-interacting .canvas-hide-on-interaction {
+      display: none !important;
+    }
+
+
+    /* ======================================================
+       RULERS
+       ====================================================== */
+
+    #topRuler {
+      position: absolute;
+
+      z-index: 20;
+
+      top: 0;
+      left: 32px;
+      right: 0;
+
+      height: 32px;
+
+      overflow: hidden;
+
+      background: #f8fafc;
+
+      border-bottom: 1px solid #cbd5e1;
+
+      pointer-events: none;
+    }
+
+
+    #leftRuler {
+      position: absolute;
+
+      z-index: 20;
+
+      top: 32px;
+      left: 0;
+      bottom: 0;
+
+      width: 32px;
+
+      overflow: hidden;
+
+      background: #f8fafc;
+
+      border-right: 1px solid #cbd5e1;
+
+      pointer-events: none;
+    }
+
+
+    #rulerCorner {
+      position: absolute;
+
+      z-index: 30;
+
+      top: 0;
+      left: 0;
+
+      width: 32px;
+      height: 32px;
+
+      background: #f1f5f9;
+
+      border-right: 1px solid #cbd5e1;
+      border-bottom: 1px solid #cbd5e1;
+
+      pointer-events: none;
+    }
+
+
+    /* ======================================================
+       CROP MODAL
+       ====================================================== */
+
+    #cropModal {
+      position: fixed;
+
+      z-index: 200;
+
+      inset: 0;
+
+      display: none;
+
+      flex-direction: column;
+
+      background: rgba(0, 0, 0, .84);
+    }
+
+
+    #cropModal.visible {
+      display: flex;
+    }
+
+
+    #cropImage {
+      display: block;
+
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+
+    .crop-image-wrap {
+      width: min(94vw, 1100px);
+
+      height: min(78vh, 760px);
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+    }
+
+
+    .crop-footer {
+      scrollbar-width: none;
+    }
+
+
+    .crop-footer::-webkit-scrollbar {
+      display: none;
+    }
+
+
+    /* ======================================================
+       MOBILE
+       ====================================================== */
+
+    @media (max-width: 700px) {
+
+      #layoutPanel {
+        top: 84px;
+        right: 8px;
+
+        width: 192px;
+      }
+
+
+      .crop-image-wrap {
+        width: 96vw;
+        height: 72vh;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+<div id="app">
+
+
+  <!-- ====================================================
+       VIEWPORT / CANVAS
+       ===================================================== -->
+
+  <div id="viewport">
+
+    <canvas id="viewportCanvas"></canvas>
+
+  </div>
+
+
+  <!-- ====================================================
+       RULERS
+       ===================================================== -->
+
+  <div id="topRuler"></div>
+
+  <div id="leftRuler"></div>
+
+  <div id="rulerCorner"></div>
+
+
+  <!-- ====================================================
+       HEADER
+       ===================================================== -->
+
+  <header
+    class="canvas-hide-on-interaction absolute left-10 top-10 z-50 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white/95 p-1.5 shadow-lg"
+  >
+
+    <div
+      class="px-1 text-xs font-semibold max-sm:hidden"
+    >
+      RC Crop Print
+    </div>
+
+
+    <label
+      class="flex h-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white px-2.5 text-[11px] font-semibold leading-none text-gray-800 hover:bg-gray-100"
+    >
+
+      Upload Image
+
+      <input
+        id="sourceInput"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        class="hidden"
+      >
+
+    </label>
+
+  </header>
+
+
+  <!-- ====================================================
+       PRINT LAYOUT PANEL
+       ===================================================== -->
+
+  <aside
+    id="layoutPanel"
+    class="canvas-hide-on-interaction absolute right-3.5 top-10 z-50 w-48 rounded-lg border border-gray-300 bg-white p-2.5 shadow-xl max-sm:top-[84px] max-sm:right-2"
+  >
+
+
+    <!-- Panel Header -->
+
+    <div
+      class="mb-2 flex items-center justify-between"
+    >
+
+      <div
+        class="text-xs font-semibold leading-none text-gray-800"
+      >
+        Print Layout
+      </div>
+
+
+      <button
+        id="closeLayoutButton"
+        class="flex h-6 w-6 items-center justify-center rounded-[5px] border border-gray-300 bg-white p-0 text-sm leading-none text-gray-700 hover:bg-gray-100"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <!-- ==================================================
+         PAPER SIZE
+         ================================================== -->
+
+    <div class="mb-1.5">
+
+      <label
+        for="paperSize"
+        class="mb-1 block text-[10px] font-semibold leading-tight text-gray-500"
+      >
+        Paper Size
+      </label>
+
+
+      <select
+        id="paperSize"
+        class="h-7.5 w-full rounded-[5px] border border-gray-300 bg-white px-1.5 text-[10px] leading-none text-gray-700 outline-none focus:border-blue-500"
+      >
+
+        <option value="A4">
+          A4
+        </option>
+
+        <option value="4x6">
+          4 × 6
+        </option>
+
+        <option value="5x7">
+          5 × 7
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <!-- ==================================================
+         ROWS / COLUMNS
+         ================================================== -->
+
+    <div class="mb-1.5">
+
+      <label
+        class="mb-1 block text-[10px] font-semibold leading-tight text-gray-500"
+      >
+        Rows / Columns
+      </label>
+
+
+      <div class="grid grid-cols-2 gap-1">
+
+        <input
+          id="rows"
+          type="number"
+          min="1"
+          max="10"
+          value="3"
+          class="h-7.5 w-full rounded-[5px] border border-gray-300 px-1.5 text-[10px] leading-none text-gray-700 outline-none focus:border-blue-500"
+        >
+
+
+        <input
+          id="columns"
+          type="number"
+          min="1"
+          max="10"
+          value="2"
+          class="h-7.5 w-full rounded-[5px] border border-gray-300 px-1.5 text-[10px] leading-none text-gray-700 outline-none focus:border-blue-500"
+        >
+
+      </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         SLOT BACKGROUND
+         ================================================== -->
+
+    <div class="mb-1.5">
+
+      <label
+        for="slotColor"
+        class="mb-1 block text-[10px] font-semibold leading-tight text-gray-500"
+      >
+        Slot Background
+      </label>
+
+
+      <div class="flex items-center gap-1.5">
+
+        <input
+          id="slotColor"
+          type="color"
+          value="#ffffff"
+          class="h-7.5 w-8 cursor-pointer rounded-[5px] border border-gray-300 bg-white p-0.5"
+        >
+
+
+        <span
+          id="slotColorText"
+          class="text-[10px] leading-none text-gray-600"
+        >
+          #ffffff
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         ORIENTATION
+         ================================================== -->
+
+    <div>
+
+      <label
+        class="mb-1 block text-[10px] font-semibold leading-tight text-gray-500"
+      >
+        Orientation
+      </label>
+
+
+      <div class="flex gap-1">
+
+        <button
+          id="portraitButton"
+          class="h-7.5 flex-1 rounded-[5px] border border-gray-900 bg-gray-900 px-1.5 text-[10px] font-medium leading-none text-white"
+        >
+          Portrait
+        </button>
+
+
+        <button
+          id="landscapeButton"
+          class="h-7.5 flex-1 rounded-[5px] border border-gray-300 bg-white px-1.5 text-[10px] font-medium leading-none text-gray-700 hover:bg-gray-100"
+        >
+          Landscape
+        </button>
+
+      </div>
+
+    </div>
+
+  </aside>
+
+
+  <!-- ====================================================
+       SHOW LAYOUT BUTTON
+       ===================================================== -->
+
+  <button
+    id="showLayoutButton"
+    class="canvas-hide-on-interaction absolute right-3.5 top-10 z-45 hidden h-8 rounded-md border border-gray-300 bg-white px-2.5 text-[11px] font-semibold leading-none text-gray-700 shadow-lg hover:bg-gray-100"
+  >
+    Print Layout
+  </button>
+
+
+  <!-- ====================================================
+       STATUS
+       ===================================================== -->
+
+  <div
+    id="status"
+    class="pointer-events-none absolute bottom-4 left-10 z-40 rounded-md border border-gray-300 bg-white/95 px-2 py-1.5 text-[10px] leading-none text-gray-600 max-sm:hidden"
+  >
+    Upload an image
+  </div>
+
+
+  <!-- ====================================================
+       BOTTOM TOOLBAR
+       ALWAYS VISIBLE
+       ===================================================== -->
+
+  <div
+    class="absolute bottom-3 left-1/2 z-[60] flex max-w-[calc(100vw-16px)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-lg border border-gray-300 bg-white/96 p-1.5 shadow-xl"
+    style="scrollbar-width:none"
+  >
+
+    <button
+      id="zoomOut"
+      class="h-8 w-8 shrink-0 rounded-md border border-gray-300 bg-white p-0 text-sm font-semibold leading-none text-gray-800 hover:bg-gray-100"
+    >
+      −
+    </button>
+
+
+    <span
+      id="zoomText"
+      class="min-w-12.5 shrink-0 text-center text-[10px] font-semibold leading-none text-gray-700"
+    >
+      100%
+    </span>
+
+
+    <button
+      id="zoomIn"
+      class="h-8 w-8 shrink-0 rounded-md border border-gray-300 bg-white p-0 text-sm font-semibold leading-none text-gray-800 hover:bg-gray-100"
+    >
+      +
+    </button>
+
+
+    <button
+      id="fitButton"
+      class="h-8 shrink-0 rounded-md border border-gray-300 bg-white px-2 text-[10px] font-semibold leading-none text-gray-700 hover:bg-gray-100"
+    >
+      Fit
+    </button>
+
+
+    <button
+      id="actualButton"
+      class="h-8 shrink-0 rounded-md border border-gray-300 bg-white px-2 text-[10px] font-semibold leading-none text-gray-700 hover:bg-gray-100"
+    >
+      100%
+    </button>
+
+
+    <button
+      id="layoutButton"
+      class="h-8 shrink-0 rounded-md border border-gray-300 bg-white px-2 text-[10px] font-semibold leading-none text-gray-700 hover:bg-gray-100"
+    >
+      Layout
+    </button>
+
+
+    <button
+      id="downloadButton"
+      class="h-8 shrink-0 rounded-md border border-gray-300 bg-white px-2 text-[10px] font-semibold leading-none text-gray-700 hover:bg-gray-100"
+    >
+      Download
+    </button>
+
+  </div>
+
+
+  <!-- ====================================================
+       CROP MODAL
+       ===================================================== -->
+
+  <section id="cropModal">
+
+
+    <!-- Crop Header -->
+
+    <header
+      class="flex min-h-14 shrink-0 items-center justify-between bg-black/95 px-3 py-2 text-white"
+    >
+
+      <div
+        class="text-xs font-semibold leading-none"
+      >
+        Crop Image
+      </div>
+
+
+      <div
+        class="flex items-center gap-1"
+      >
+
+        <button
+          id="cropRotateLeft"
+          class="flex h-8 w-8 items-center justify-center rounded-md border border-gray-600 bg-neutral-800 p-0 text-sm leading-none text-white"
+        >
+          ↶
+        </button>
+
+
+        <button
+          id="cropRotateRight"
+          class="flex h-8 w-8 items-center justify-center rounded-md border border-gray-600 bg-neutral-800 p-0 text-sm leading-none text-white"
+        >
+          ↷
+        </button>
+
+
+        <button
+          id="cropCancel"
+          class="h-8 rounded-md border border-gray-600 bg-neutral-800 px-2 text-[10px] font-semibold leading-none text-white"
+        >
+          Cancel
+        </button>
+
+      </div>
+
+    </header>
+
+
+    <!-- Crop Image -->
+
+    <div
+      class="flex min-h-0 flex-1 items-center justify-center overflow-hidden"
+    >
+
+      <div class="crop-image-wrap">
+
+        <img
+          id="cropImage"
+          alt="Image to crop"
+        >
+
+      </div>
+
+    </div>
+
+
+    <!-- Crop Controls -->
+
+    <footer
+      class="crop-footer flex min-h-14 shrink-0 items-center justify-center gap-1 overflow-x-auto bg-black/95 p-2.5 max-sm:justify-start"
+    >
+
+      <button
+        class="ratioButton shrink-0 rounded-md border border-white bg-white px-2.5 py-1.5 text-[10px] font-semibold leading-none text-gray-900"
+        data-ratio="0"
+      >
+        Free
+      </button>
+
+
+      <button
+        class="ratioButton shrink-0 rounded-md border border-gray-600 bg-neutral-800 px-2.5 py-1.5 text-[10px] font-semibold leading-none text-white"
+        data-ratio="0.6666666667"
+      >
+        2:3
+      </button>
+
+
+      <button
+        class="ratioButton shrink-0 rounded-md border border-gray-600 bg-neutral-800 px-2.5 py-1.5 text-[10px] font-semibold leading-none text-white"
+        data-ratio="1.5"
+      >
+        3:2
+      </button>
+
+
+      <button
+        class="ratioButton shrink-0 rounded-md border border-gray-600 bg-neutral-800 px-2.5 py-1.5 text-[10px] font-semibold leading-none text-white"
+        data-ratio="0.8"
+      >
+        4:5
+      </button>
+
+
+      <button
+        class="ratioButton shrink-0 rounded-md border border-gray-600 bg-neutral-800 px-2.5 py-1.5 text-[10px] font-semibold leading-none text-white"
+        data-ratio="1.25"
+      >
+        5:4
+      </button>
+
+
+      <button
+        class="ratioButton shrink-0 rounded-md border border-gray-600 bg-neutral-800 px-2.5 py-1.5 text-[10px] font-semibold leading-none text-white"
+        data-ratio="1"
+      >
+        1:1
+      </button>
+
+
+      <button
+        id="cropApply"
+        class="ml-1.5 shrink-0 rounded-md border border-blue-600 bg-blue-600 px-3 py-1.5 text-[10px] font-semibold leading-none text-white"
+      >
+        Crop
+      </button>
+
+    </footer>
+
+  </section>
+
+</div>
+
+
+<!-- ========================================================
+     CROPPER.JS
+     ========================================================= -->
+
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"
+></script>
+
+
+<script>
+
+/* ============================================================
+   DOM
+   ============================================================ */
+
+const app =
+  document.getElementById("app");
+
+const viewport =
+  document.getElementById("viewport");
+
+const viewportCanvas =
+  document.getElementById("viewportCanvas");
+
+const ctx =
+  viewportCanvas.getContext("2d");
+
+const topRuler =
+  document.getElementById("topRuler");
+
+const leftRuler =
+  document.getElementById("leftRuler");
+
+const sourceInput =
+  document.getElementById("sourceInput");
+
+const layoutPanel =
+  document.getElementById("layoutPanel");
+
+const showLayoutButton =
+  document.getElementById("showLayoutButton");
+
+const closeLayoutButton =
+  document.getElementById("closeLayoutButton");
+
+const layoutButton =
+  document.getElementById("layoutButton");
+
+const paperSize =
+  document.getElementById("paperSize");
+
+const rowsInput =
+  document.getElementById("rows");
+
+const columnsInput =
+  document.getElementById("columns");
+
+const slotColor =
+  document.getElementById("slotColor");
+
+const slotColorText =
+  document.getElementById("slotColorText");
+
+const portraitButton =
+  document.getElementById("portraitButton");
+
+const landscapeButton =
+  document.getElementById("landscapeButton");
+
+const zoomText =
+  document.getElementById("zoomText");
+
+const status =
+  document.getElementById("status");
+
+const downloadButton =
+  document.getElementById("downloadButton");
+
+
+/* ============================================================
+   CROP DOM
+   ============================================================ */
+
+const cropModal =
+  document.getElementById("cropModal");
+
+const cropImage =
+  document.getElementById("cropImage");
+
+const cropApply =
+  document.getElementById("cropApply");
+
+const cropCancel =
+  document.getElementById("cropCancel");
+
+const cropRotateLeft =
+  document.getElementById("cropRotateLeft");
+
+const cropRotateRight =
+  document.getElementById("cropRotateRight");
+
+const ratioButtons =
+  document.querySelectorAll(".ratioButton");
+
+
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+
+const DPI =
+  300;
+
+
+/*
+ * Internal preview dimensions.
+ *
+ * This is deliberately much smaller than the
+ * final print sheet so viewport interaction
+ * remains lightweight.
+ */
+
+const PHOTO_WIDTH =
+  360;
+
+const PHOTO_HEIGHT =
+  450;
+
+
+const MIN_ZOOM =
+  0.05;
+
+const MAX_ZOOM =
+  8;
+
+
+/* ============================================================
+   PAPER SIZES
+   ============================================================ */
+
+const PAPER_SIZES = {
+
+  A4: {
+    width: 2480,
+    height: 3505
+  },
+
+  "4x6": {
+    width: 1200,
+    height: 1800
+  },
+
+  "5x7": {
+    width: 1500,
+    height: 2100
+  }
+
+};
+
+
+/* ============================================================
+   VIEWPORT STATE
+   ============================================================ */
+
+let dpr =
+  window.devicePixelRatio || 1;
+
+let viewportWidth =
+  0;
+
+let viewportHeight =
+  0;
+
+
+/* ============================================================
+   IMAGE STATE
+   ============================================================ */
+
+let cropper =
+  null;
+
+let cropObjectUrl =
+  null;
+
+let croppedCanvas =
+  null;
+
+
+/* ============================================================
+   PRINT SHEET
+   ============================================================ */
+
+let sheetCanvas =
+  null;
+
+let hasGeneratedSheet =
+  false;
+
+
+/* ============================================================
+   TIMERS
+   ============================================================ */
+
+let sheetUpdateTimer =
+  null;
+
+let interactionTimer =
+  null;
+
+
+/* ============================================================
+   LAYOUT STATE
+   ============================================================ */
+
+const layout = {
+
+  paper: "A4",
+
+  rows: 3,
+
+  columns: 2,
+
+  landscape: false,
+
+  slotColor: "#ffffff",
+
+  gap: 40
+
+};
+
+
+/* ============================================================
+   CAMERA
+   ============================================================ */
+
+const camera = {
+
+  x: 0,
+
+  y: 0,
+
+  zoom: 1
+
+};
+
+
+/* ============================================================
+   CANVAS INTERACTION
+   ============================================================ */
+
+function startCanvasInteraction() {
+
+  /*
+   * Header and Print Layout panel
+   * disappear immediately.
+   */
+
+  app.classList.add(
+    "canvas-interacting"
+  );
+
+
+  /*
+   * Restore after interaction
+   * has stopped.
+   */
+
+  clearTimeout(
+    interactionTimer
+  );
+
+
+  interactionTimer =
+    setTimeout(
+      () => {
+
+        app.classList.remove(
+          "canvas-interacting"
+        );
+
+      },
+      700
+    );
+
+}
+
+
+/* ============================================================
+   RESIZE
+   ============================================================ */
+
+function resizeViewport() {
+
+  dpr =
+    window.devicePixelRatio || 1;
+
+
+  viewportWidth =
+    window.innerWidth;
+
+
+  viewportHeight =
+    window.innerHeight;
+
+
+  viewportCanvas.width =
+    viewportWidth * dpr;
+
+
+  viewportCanvas.height =
+    viewportHeight * dpr;
+
+
+  viewportCanvas.style.width =
+    `${viewportWidth}px`;
+
+
+  viewportCanvas.style.height =
+    `${viewportHeight}px`;
+
+
+  render();
+
+}
+
+
+window.addEventListener(
+  "resize",
+  resizeViewport
+);
+
+
+/* ============================================================
+   CLAMP
+   ============================================================ */
+
+function clamp(
+  value,
+  min,
+  max
+) {
+
+  return Math.max(
+    min,
+    Math.min(
+      max,
+      value
+    )
+  );
+
+}
+
+
+/* ============================================================
+   COORDINATE TRANSFORMATION
+   ============================================================ */
+
+function worldToScreen(
+  x,
+  y
+) {
+
+  return {
+
+    x:
+      x * camera.zoom +
+      camera.x,
+
+    y:
+      y * camera.zoom +
+      camera.y
+
+  };
+
+}
+
+
+function screenToWorld(
+  x,
+  y
+) {
+
+  return {
+
+    x:
+      (x - camera.x) /
+      camera.zoom,
+
+    y:
+      (y - camera.y) /
+      camera.zoom
+
+  };
+
+}
+
+
+/* ============================================================
+   ZOOM
+   ============================================================ */
+
+function zoomAt(
+  x,
+  y,
+  newZoom
+) {
+
+  newZoom =
+    clamp(
+      newZoom,
+      MIN_ZOOM,
+      MAX_ZOOM
+    );
+
+
+  /*
+   * World point currently under
+   * cursor/finger.
+   */
+
+  const world =
+    screenToWorld(
+      x,
+      y
+    );
+
+
+  camera.zoom =
+    newZoom;
+
+
+  /*
+   * Keep that same point under
+   * the cursor/finger.
+   */
+
+  camera.x =
+    x -
+    world.x *
+      camera.zoom;
+
+
+  camera.y =
+    y -
+    world.y *
+      camera.zoom;
+
+
+  updateZoom();
+
+  render();
+
+}
+
+
+function zoomBy(
+  factor,
+  x,
+  y
+) {
+
+  zoomAt(
+
+    x,
+    y,
+
+    camera.zoom *
+      factor
+
+  );
+
+}
+
+
+function updateZoom() {
+
+  zoomText.textContent =
+    `${Math.round(
+      camera.zoom * 100
+    )}%`;
+
+}
+
+
+/* ============================================================
+   DEBOUNCE SHEET GENERATION
+   ============================================================ */
+
+function scheduleSheetUpdate() {
+
+  clearTimeout(
+    sheetUpdateTimer
+  );
+
+
+  sheetUpdateTimer =
+    setTimeout(
+      () => {
+
+        sheetUpdateTimer =
+          null;
+
+        generateSheet();
+
+      },
+      120
+    );
+
+}
+
+
+/* ============================================================
+   UPLOAD IMAGE
+   ============================================================ */
+
+sourceInput.addEventListener(
+  "change",
+  event => {
+
+    const file =
+      event.target.files[0];
+
+
+    if (!file) {
+      return;
+    }
+
+
+    /*
+     * Release previous object URL.
+     */
+
+    if (cropObjectUrl) {
+
+      URL.revokeObjectURL(
+        cropObjectUrl
+      );
+
+    }
+
+
+    cropObjectUrl =
+      URL.createObjectURL(
+        file
+      );
+
+
+    /*
+     * Display crop modal.
+     */
+
+    cropImage.src =
+      cropObjectUrl;
+
+
+    cropModal.classList.add(
+      "visible"
+    );
+
+
+    /*
+     * Destroy previous Cropper.
+     */
+
+    if (cropper) {
+
+      cropper.destroy();
+
+      cropper =
+        null;
+
+    }
+
+
+    /*
+     * Initialize after image loads.
+     */
+
+    cropImage.onload =
+      () => {
+
+        cropper =
+          new Cropper(
+            cropImage,
+            {
+
+              viewMode: 1,
+
+              dragMode: "move",
+
+              autoCropArea: .85,
+
+              responsive: true,
+
+              restore: false,
+
+              guides: true,
+
+              center: true,
+
+              highlight: true,
+
+              background: false,
+
+              movable: true,
+
+              zoomable: true,
+
+              rotatable: true,
+
+              scalable: false,
+
+              cropBoxMovable: true,
+
+              cropBoxResizable: true,
+
+              toggleDragModeOnDblclick: false
+
+            }
+          );
+
+      };
+
+  }
+);
+
+
+/* ============================================================
+   CROP RATIO
+   ============================================================ */
+
+ratioButtons.forEach(
+  button => {
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        /*
+         * Reset all buttons.
+         */
+
+        ratioButtons.forEach(
+          item => {
+
+            item.classList.remove(
+              "bg-white",
+              "text-gray-900"
+            );
+
+            item.classList.add(
+              "bg-neutral-800",
+              "text-white"
+            );
+
+          }
+        );
+
+
+        /*
+         * Activate selected button.
+         */
+
+        button.classList.remove(
+          "bg-neutral-800",
+          "text-white"
+        );
+
+
+        button.classList.add(
+          "bg-white",
+          "text-gray-900"
+        );
+
+
+        if (!cropper) {
+          return;
+        }
+
+
+        cropper.setAspectRatio(
+          Number(
+            button.dataset.ratio
+          )
+        );
+
+      }
+    );
+
+  }
+);
+
+
+/* ============================================================
+   ROTATE
+   ============================================================ */
+
+cropRotateLeft.addEventListener(
+  "click",
+  () => {
+
+    if (cropper) {
+
+      cropper.rotate(
+        -90
+      );
+
+    }
+
+  }
+);
+
+
+cropRotateRight.addEventListener(
+  "click",
+  () => {
+
+    if (cropper) {
+
+      cropper.rotate(
+        90
+      );
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   CLOSE CROPPER
+   ============================================================ */
+
+function closeCropper() {
+
+  cropModal.classList.remove(
+    "visible"
+  );
+
+
+  if (cropper) {
+
+    cropper.destroy();
+
+    cropper =
+      null;
+
+  }
+
+}
+
+
+/* ============================================================
+   CANCEL CROP
+   ============================================================ */
+
+cropCancel.addEventListener(
+  "click",
+  closeCropper
+);
+
+
+/* ============================================================
+   APPLY CROP
+   ============================================================ */
+
+cropApply.addEventListener(
+  "click",
+  () => {
+
+    if (!cropper) {
+      return;
+    }
+
+
+    /*
+     * Create a small working canvas.
+     *
+     * This means the original heavy image
+     * isn't continuously processed by the
+     * print grid.
+     */
+
+    croppedCanvas =
+      cropper.getCroppedCanvas({
+
+        width:
+          PHOTO_WIDTH,
+
+        height:
+          PHOTO_HEIGHT,
+
+        imageSmoothingEnabled:
+          true,
+
+        imageSmoothingQuality:
+          "high",
+
+        fillColor:
+          "#ffffff"
+
+      });
+
+
+    closeCropper();
+
+
+    /*
+     * Force a fresh sheet.
+     */
+
+    sheetCanvas =
+      null;
+
+
+    hasGeneratedSheet =
+      false;
+
+
+    /*
+     * Generate immediately because
+     * Crop is an explicit action.
+     */
+
+    generateSheet();
+
+
+    status.textContent =
+      "Crop applied · 360 × 450";
+
+  }
+);
+
+
+/* ============================================================
+   GET PAPER
+   ============================================================ */
+
+function getPaper() {
+
+  const paper =
+    PAPER_SIZES[
+      layout.paper
+    ];
+
+
+  if (
+    layout.landscape
+  ) {
+
+    return {
+
+      width:
+        paper.height,
+
+      height:
+        paper.width
+
+    };
+
+  }
+
+
+  return paper;
+
+}
+
+
+/* ============================================================
+   GENERATE PRINT SHEET
+   ============================================================ */
+
+function generateSheet() {
+
+  if (!croppedCanvas) {
+    return;
+  }
+
+
+  /*
+   * Preserve camera.
+   */
+
+  const oldZoom =
+    camera.zoom;
+
+  const oldX =
+    camera.x;
+
+  const oldY =
+    camera.y;
+
+
+  const paper =
+    getPaper();
+
+
+  /*
+   * Create print sheet.
+   */
+
+  sheetCanvas =
+    document.createElement(
+      "canvas"
+    );
+
+
+  sheetCanvas.width =
+    paper.width;
+
+
+  sheetCanvas.height =
+    paper.height;
+
+
+  const sheetContext =
+    sheetCanvas.getContext(
+      "2d"
+    );
+
+
+  /*
+   * White paper.
+   */
+
+  sheetContext.fillStyle =
+    "#ffffff";
+
+
+  sheetContext.fillRect(
+
+    0,
+    0,
+
+    paper.width,
+    paper.height
+
+  );
+
+
+  const gap =
+    layout.gap;
+
+
+  const margin =
+    gap / 2;
+
+
+  /*
+   * Create grid.
+   */
+
+  for (
+    let row = 0;
+    row < layout.rows;
+    row++
+  ) {
+
+    for (
+      let column = 0;
+      column < layout.columns;
+      column++
+    ) {
+
+      const x =
+        margin +
+        column *
+        (
+          PHOTO_WIDTH +
+          gap
+        );
+
+
+      const y =
+        margin +
+        row *
+        (
+          PHOTO_HEIGHT +
+          gap
+        );
+
+
+      /*
+       * Don't draw outside paper.
+       */
+
+      if (
+
+        x + PHOTO_WIDTH >
+          paper.width ||
+
+        y + PHOTO_HEIGHT >
+          paper.height
+
+      ) {
+
+        continue;
+
+      }
+
+
+      /*
+       * Slot background.
+       */
+
+      sheetContext.fillStyle =
+        layout.slotColor;
+
+
+      sheetContext.fillRect(
+
+        x,
+        y,
+
+        PHOTO_WIDTH,
+        PHOTO_HEIGHT
+
+      );
+
+
+      /*
+       * Photo.
+       */
+
+      sheetContext.drawImage(
+
+        croppedCanvas,
+
+        x,
+        y,
+
+        PHOTO_WIDTH,
+        PHOTO_HEIGHT
+
+      );
+
+
+      /*
+       * Cut border.
+       */
+
+      sheetContext.strokeStyle =
+        "#000000";
+
+
+      sheetContext.lineWidth =
+        5;
+
+
+      sheetContext.strokeRect(
+
+        x,
+        y,
+
+        PHOTO_WIDTH,
+        PHOTO_HEIGHT
+
+      );
+
+    }
+
+  }
+
+
+  /*
+   * First generation fits to viewport.
+   */
+
+  if (!hasGeneratedSheet) {
+
+    hasGeneratedSheet =
+      true;
+
+
+    fitSheet();
+
+  } else {
+
+    /*
+     * Preserve current viewport.
+     */
+
+    camera.zoom =
+      oldZoom;
+
+
+    camera.x =
+      oldX;
+
+
+    camera.y =
+      oldY;
+
+
+    updateZoom();
+
+    render();
+
+  }
+
+
+  updateStatus();
+
+}
+
+
+/* ============================================================
+   FIT SHEET
+   ============================================================ */
+
+function fitSheet() {
+
+  if (!sheetCanvas) {
+    return;
+  }
+
+
+  const padding =
+    100;
+
+
+  const zoomX =
+    (
+      viewportWidth -
+      padding * 2
+    ) /
+    sheetCanvas.width;
+
+
+  const zoomY =
+    (
+      viewportHeight -
+      padding * 2
+    ) /
+    sheetCanvas.height;
+
+
+  camera.zoom =
+    clamp(
+
+      Math.min(
+        zoomX,
+        zoomY
+      ),
+
+      MIN_ZOOM,
+      MAX_ZOOM
+
+    );
+
+
+  camera.x =
+    (
+      viewportWidth -
+      sheetCanvas.width *
+        camera.zoom
+    ) / 2;
+
+
+  camera.y =
+    (
+      viewportHeight -
+      sheetCanvas.height *
+        camera.zoom
+    ) / 2;
+
+
+  updateZoom();
+
+  render();
+
+}
+
+
+/* ============================================================
+   ACTUAL 100%
+   ============================================================ */
+
+function actualSize() {
+
+  if (!sheetCanvas) {
+    return;
+  }
+
+
+  camera.zoom =
+    1;
+
+
+  camera.x =
+    (
+      viewportWidth -
+      sheetCanvas.width
+    ) / 2;
+
+
+  camera.y =
+    (
+      viewportHeight -
+      sheetCanvas.height
+    ) / 2;
+
+
+  updateZoom();
+
+  render();
+
+}
+
+
+/* ============================================================
+   PAPER SIZE
+   ============================================================ */
+
+paperSize.addEventListener(
+  "change",
+  () => {
+
+    layout.paper =
+      paperSize.value;
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+/* ============================================================
+   ROWS
+   ============================================================ */
+
+rowsInput.addEventListener(
+  "input",
+  () => {
+
+    layout.rows =
+      clamp(
+
+        Number(
+          rowsInput.value
+        ) || 1,
+
+        1,
+        10
+
+      );
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+/* ============================================================
+   COLUMNS
+   ============================================================ */
+
+columnsInput.addEventListener(
+  "input",
+  () => {
+
+    layout.columns =
+      clamp(
+
+        Number(
+          columnsInput.value
+        ) || 1,
+
+        1,
+        10
+
+      );
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+/* ============================================================
+   SLOT COLOR
+   ============================================================ */
+
+slotColor.addEventListener(
+  "input",
+  () => {
+
+    layout.slotColor =
+      slotColor.value;
+
+
+    slotColorText.textContent =
+      slotColor.value;
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+/* ============================================================
+   ORIENTATION
+   ============================================================ */
+
+portraitButton.addEventListener(
+  "click",
+  () => {
+
+    layout.landscape =
+      false;
+
+
+    portraitButton.className =
+      "h-7.5 flex-1 rounded-[5px] border border-gray-900 bg-gray-900 px-1.5 text-[10px] font-medium leading-none text-white";
+
+
+    landscapeButton.className =
+      "h-7.5 flex-1 rounded-[5px] border border-gray-300 bg-white px-1.5 text-[10px] font-medium leading-none text-gray-700 hover:bg-gray-100";
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+landscapeButton.addEventListener(
+  "click",
+  () => {
+
+    layout.landscape =
+      true;
+
+
+    landscapeButton.className =
+      "h-7.5 flex-1 rounded-[5px] border border-gray-900 bg-gray-900 px-1.5 text-[10px] font-medium leading-none text-white";
+
+
+    portraitButton.className =
+      "h-7.5 flex-1 rounded-[5px] border border-gray-300 bg-white px-1.5 text-[10px] font-medium leading-none text-gray-700 hover:bg-gray-100";
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+/* ============================================================
+   LAYOUT PANEL
+   ============================================================ */
+
+function showLayout() {
+
+  layoutPanel.classList.remove(
+    "hidden"
+  );
+
+
+  showLayoutButton.classList.add(
+    "hidden"
+  );
+
+}
+
+
+function hideLayout() {
+
+  layoutPanel.classList.add(
+    "hidden"
+  );
+
+
+  showLayoutButton.classList.remove(
+    "hidden"
+  );
+
+}
+
+
+closeLayoutButton.addEventListener(
+  "click",
+  hideLayout
+);
+
+
+showLayoutButton.addEventListener(
+  "click",
+  showLayout
+);
+
+
+layoutButton.addEventListener(
+  "click",
+  () => {
+
+    if (
+      layoutPanel.classList.contains(
+        "hidden"
+      )
+    ) {
+
+      showLayout();
+
+    } else {
+
+      hideLayout();
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   DOWNLOAD
+   ============================================================ */
+
+downloadButton.addEventListener(
+  "click",
+  () => {
+
+    if (!sheetCanvas) {
+      return;
+    }
+
+
+    sheetCanvas.toBlob(
+      blob => {
+
+        if (!blob) {
+          return;
+        }
+
+
+        const url =
+          URL.createObjectURL(
+            blob
+          );
+
+
+        const link =
+          document.createElement(
+            "a"
+          );
+
+
+        link.href =
+          url;
+
+
+        link.download =
+          `rc-crop-print-${Date.now()}.png`;
+
+
+        link.click();
+
+
+        setTimeout(
+          () => {
+
+            URL.revokeObjectURL(
+              url
+            );
+
+          },
+          500
+        );
+
+      },
+      "image/png"
+    );
+
+  }
+);
+
+
+/* ============================================================
+   MOUSE PAN
+   ============================================================ */
+
+let mouseDragging =
+  false;
+
+let lastMouseX =
+  0;
+
+let lastMouseY =
+  0;
+
+let spacePressed =
+  false;
+
+
+/* ============================================================
+   SPACE KEY
+   ============================================================ */
+
+window.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.code === "Space"
+    ) {
+
+      spacePressed =
+        true;
+
+
+      /*
+       * Prevent page scrolling.
+       */
+
+      event.preventDefault();
+
+    }
+
+  }
+);
+
+
+window.addEventListener(
+  "keyup",
+  event => {
+
+    if (
+      event.code === "Space"
+    ) {
+
+      spacePressed =
+        false;
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   MOUSE DOWN
+   ============================================================ */
+
+viewport.addEventListener(
+  "mousedown",
+  event => {
+
+    const canPan =
+      event.button === 1 ||
+      (
+        event.button === 0 &&
+        spacePressed
+      );
+
+
+    if (!canPan) {
+      return;
+    }
+
+
+    event.preventDefault();
+
+
+    startCanvasInteraction();
+
+
+    mouseDragging =
+      true;
+
+
+    lastMouseX =
+      event.clientX;
+
+
+    lastMouseY =
+      event.clientY;
+
+
+    viewport.classList.add(
+      "dragging"
+    );
+
+  }
+);
+
+
+/* ============================================================
+   MOUSE MOVE
+   ============================================================ */
+
+window.addEventListener(
+  "mousemove",
+  event => {
+
+    if (!mouseDragging) {
+      return;
+    }
+
+
+    startCanvasInteraction();
+
+
+    camera.x +=
+      event.clientX -
+      lastMouseX;
+
+
+    camera.y +=
+      event.clientY -
+      lastMouseY;
+
+
+    lastMouseX =
+      event.clientX;
+
+
+    lastMouseY =
+      event.clientY;
+
+
+    render();
+
+  }
+);
+
+
+/* ============================================================
+   MOUSE UP
+   ============================================================ */
+
+window.addEventListener(
+  "mouseup",
+  () => {
+
+    mouseDragging =
+      false;
+
+
+    viewport.classList.remove(
+      "dragging"
+    );
+
+  }
+);
+
+
+/* ============================================================
+   WHEEL
+   ============================================================ */
+
+viewport.addEventListener(
+  "wheel",
+  event => {
+
+    event.preventDefault();
+
+
+    startCanvasInteraction();
+
+
+    const rect =
+      viewport.getBoundingClientRect();
+
+
+    const x =
+      event.clientX -
+      rect.left;
+
+
+    const y =
+      event.clientY -
+      rect.top;
+
+
+    /*
+     * Ctrl + wheel
+     * or
+     * Cmd + wheel
+     *
+     * = zoom
+     */
+
+    if (
+      event.ctrlKey ||
+      event.metaKey
+    ) {
+
+      zoomBy(
+
+        event.deltaY < 0
+          ? 1.1
+          : 1 / 1.1,
+
+        x,
+        y
+
+      );
+
+
+      return;
+
+    }
+
+
+    /*
+     * Normal wheel = pan.
+     */
+
+    camera.x -=
+      event.deltaX;
+
+
+    camera.y -=
+      event.deltaY;
+
+
+    render();
+
+  },
+  {
+    passive: false
+  }
+);
+
+
+/* ============================================================
+   TOUCH POINTERS
+   ============================================================ */
+
+const pointers =
+  new Map();
+
+
+let gesture = {
+
+  mode: null,
+
+  startDistance: 0,
+
+  startZoom: 1,
+
+  startCenter: null,
+
+  startCameraX: 0,
+
+  startCameraY: 0,
+
+  startWorldX: 0,
+
+  startWorldY: 0
+
+};
+
+
+/* ============================================================
+   GET POINTERS
+   ============================================================ */
+
+function getPointers() {
+
+  return [
+    ...pointers.values()
+  ];
+
+}
+
+
+/* ============================================================
+   POINTER CENTER
+   ============================================================ */
+
+function getCenter(
+  a,
+  b
+) {
+
+  return {
+
+    x:
+      (
+        a.x +
+        b.x
+      ) / 2,
+
+    y:
+      (
+        a.y +
+        b.y
+      ) / 2
+
+  };
+
+}
+
+
+/* ============================================================
+   POINTER DISTANCE
+   ============================================================ */
+
+function getDistance(
+  a,
+  b
+) {
+
+  return Math.hypot(
+
+    b.x -
+    a.x,
+
+    b.y -
+    a.y
+
+  );
+
+}
+
+
+/* ============================================================
+   START TOUCH GESTURE
+   ============================================================ */
+
+function startTouchGesture() {
+
+  const points =
+    getPointers();
+
+
+  /*
+   * ONE FINGER
+   *
+   * Pan.
+   */
+
+  if (
+    points.length === 1
+  ) {
+
+    const point =
+      points[0];
+
+
+    gesture = {
+
+      mode: "pan",
+
+      startDistance: 0,
+
+      startZoom:
+        camera.zoom,
+
+      startCenter: {
+
+        x:
+          point.x,
+
+        y:
+          point.y
+
+      },
+
+      startCameraX:
+        camera.x,
+
+      startCameraY:
+        camera.y,
+
+      startWorldX: 0,
+
+      startWorldY: 0
+
+    };
+
+
+    return;
+
+  }
+
+
+  /*
+   * TWO FINGERS
+   *
+   * Pan + pinch zoom.
+   */
+
+  if (
+    points.length === 2
+  ) {
+
+    const [
+      a,
+      b
+    ] =
+      points;
+
+
+    const center =
+      getCenter(
+        a,
+        b
+      );
+
+
+    const distance =
+      getDistance(
+        a,
+        b
+      );
+
+
+    const world =
+      screenToWorld(
+
+        center.x,
+
+        center.y
+
+      );
+
+
+    gesture = {
+
+      mode: "pinch",
+
+      startDistance:
+        distance,
+
+      startZoom:
+        camera.zoom,
+
+      startCenter:
+        center,
+
+      startCameraX:
+        camera.x,
+
+      startCameraY:
+        camera.y,
+
+      startWorldX:
+        world.x,
+
+      startWorldY:
+        world.y
+
+    };
+
+  }
+
+}
+
+
+/* ============================================================
+   POINTER DOWN
+   ============================================================ */
+
+viewport.addEventListener(
+  "pointerdown",
+  event => {
+
+    /*
+     * Mouse is handled separately.
+     */
+
+    if (
+      event.pointerType === "mouse"
+    ) {
+
+      return;
+
+    }
+
+
+    event.preventDefault();
+
+
+    startCanvasInteraction();
+
+
+    viewport.setPointerCapture(
+      event.pointerId
+    );
+
+
+    pointers.set(
+
+      event.pointerId,
+
+      {
+
+        id:
+          event.pointerId,
+
+        x:
+          event.clientX,
+
+        y:
+          event.clientY
+
+      }
+
+    );
+
+
+    startTouchGesture();
+
+  },
+  {
+    passive: false
+  }
+);
+
+
+/* ============================================================
+   POINTER MOVE
+   ============================================================ */
+
+viewport.addEventListener(
+  "pointermove",
+  event => {
+
+    if (
+      event.pointerType === "mouse"
+    ) {
+
+      return;
+
+    }
+
+
+    event.preventDefault();
+
+
+    const pointer =
+      pointers.get(
+        event.pointerId
+      );
+
+
+    if (!pointer) {
+      return;
+    }
+
+
+    pointer.x =
+      event.clientX;
+
+
+    pointer.y =
+      event.clientY;
+
+
+    startCanvasInteraction();
+
+
+    const points =
+      getPointers();
+
+
+    /*
+     * ONE FINGER PAN
+     */
+
+    if (
+      points.length === 1 &&
+      gesture.mode === "pan"
+    ) {
+
+      const point =
+        points[0];
+
+
+      camera.x =
+        gesture.startCameraX +
+        (
+          point.x -
+          gesture.startCenter.x
+        );
+
+
+      camera.y =
+        gesture.startCameraY +
+        (
+          point.y -
+          gesture.startCenter.y
+        );
+
+
+      render();
+
+      return;
+
+    }
+
+
+    /*
+     * TWO FINGER PAN + ZOOM
+     */
+
+    if (
+      points.length === 2 &&
+      gesture.mode === "pinch"
+    ) {
+
+      const [
+        a,
+        b
+      ] =
+        points;
+
+
+      const center =
+        getCenter(
+          a,
+          b
+        );
+
+
+      const distance =
+        getDistance(
+          a,
+          b
+        );
+
+
+      const scale =
+        distance /
+        gesture.startDistance;
+
+
+      camera.zoom =
+        clamp(
+
+          gesture.startZoom *
+            scale,
+
+          MIN_ZOOM,
+          MAX_ZOOM
+
+        );
+
+
+      /*
+       * Keep the world point
+       * underneath the finger midpoint.
+       */
+
+      camera.x =
+        center.x -
+        gesture.startWorldX *
+          camera.zoom;
+
+
+      camera.y =
+        center.y -
+        gesture.startWorldY *
+          camera.zoom;
+
+
+      updateZoom();
+
+      render();
+
+    }
+
+  },
+  {
+    passive: false
+  }
+);
+
+
+/* ============================================================
+   POINTER END
+   ============================================================ */
+
+function finishTouch(
+  event
+) {
+
+  if (
+    event.pointerType === "mouse"
+  ) {
+
+    return;
+
+  }
+
+
+  pointers.delete(
+    event.pointerId
+  );
+
+
+  /*
+   * If one finger remains,
+   * continue as pan.
+   */
+
+  if (
+    pointers.size === 1
+  ) {
+
+    const point =
+      getPointers()[0];
+
+
+    gesture = {
+
+      mode: "pan",
+
+      startDistance: 0,
+
+      startZoom:
+        camera.zoom,
+
+      startCenter: {
+
+        x:
+          point.x,
+
+        y:
+          point.y
+
+      },
+
+      startCameraX:
+        camera.x,
+
+      startCameraY:
+        camera.y,
+
+      startWorldX: 0,
+
+      startWorldY: 0
+
+    };
+
+
+    return;
+
+  }
+
+
+  gesture.mode =
+    null;
+
+}
+
+
+viewport.addEventListener(
+  "pointerup",
+  finishTouch
+);
+
+
+viewport.addEventListener(
+  "pointercancel",
+  finishTouch
+);
+
+
+/* ============================================================
+   KEYBOARD SHORTCUTS
+   ============================================================ */
+
+window.addEventListener(
+  "keydown",
+  event => {
+
+    const modifier =
+      event.ctrlKey ||
+      event.metaKey;
+
+
+    if (!modifier) {
+      return;
+    }
+
+
+    /*
+     * Ctrl/Cmd +
+     */
+
+    if (
+      event.key === "+" ||
+      event.key === "="
+    ) {
+
+      event.preventDefault();
+
+
+      zoomBy(
+
+        1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+
+
+    /*
+     * Ctrl/Cmd -
+     */
+
+    if (
+      event.key === "-"
+    ) {
+
+      event.preventDefault();
+
+
+      zoomBy(
+
+        1 / 1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+
+
+    /*
+     * Ctrl/Cmd 0
+     *
+     * Fit.
+     */
+
+    if (
+      event.key === "0"
+    ) {
+
+      event.preventDefault();
+
+      fitSheet();
+
+    }
+
+
+    /*
+     * Ctrl/Cmd 1
+     *
+     * Actual 100%.
+     */
+
+    if (
+      event.key === "1"
+    ) {
+
+      event.preventDefault();
+
+      actualSize();
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+
+document
+  .getElementById("zoomIn")
+  .addEventListener(
+    "click",
+    () => {
+
+      zoomBy(
+
+        1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("zoomOut")
+  .addEventListener(
+    "click",
+    () => {
+
+      zoomBy(
+
+        1 / 1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("fitButton")
+  .addEventListener(
+    "click",
+    fitSheet
+  );
+
+
+document
+  .getElementById("actualButton")
+  .addEventListener(
+    "click",
+    actualSize
+  );
+
+
+/* ============================================================
+   DRAW PRINT SHEET
+   ============================================================ */
+
+function drawSheet() {
+
+  if (!sheetCanvas) {
+    return;
+  }
+
+
+  const position =
+    worldToScreen(
+      0,
+      0
+    );
+
+
+  const width =
+    sheetCanvas.width *
+    camera.zoom;
+
+
+  const height =
+    sheetCanvas.height *
+    camera.zoom;
+
+
+  ctx.save();
+
+
+  /*
+   * Paper shadow.
+   */
+
+  ctx.shadowColor =
+    "rgba(0,0,0,.25)";
+
+
+  ctx.shadowBlur =
+    24;
+
+
+  ctx.shadowOffsetY =
+    8;
+
+
+  ctx.fillStyle =
+    "#ffffff";
+
+
+  ctx.fillRect(
+
+    position.x,
+    position.y,
+
+    width,
+    height
+
+  );
+
+
+  ctx.shadowColor =
+    "transparent";
+
+
+  /*
+   * Sheet.
+   */
+
+  ctx.drawImage(
+
+    sheetCanvas,
+
+    position.x,
+    position.y,
+
+    width,
+    height
+
+  );
+
+
+  /*
+   * Paper border.
+   */
+
+  ctx.strokeStyle =
+    "#9ca3af";
+
+
+  ctx.lineWidth =
+    1;
+
+
+  ctx.strokeRect(
+
+    position.x,
+    position.y,
+
+    width,
+    height
+
+  );
+
+
+  ctx.restore();
+
+}
+
+
+/* ============================================================
+   WORKSPACE GRID
+   ============================================================ */
+
+function drawWorkspaceGrid() {
+
+  const spacing =
+    32;
+
+
+  const topLeft =
+    screenToWorld(
+      0,
+      0
+    );
+
+
+  const bottomRight =
+    screenToWorld(
+      viewportWidth,
+      viewportHeight
+    );
+
+
+  const startX =
+    Math.floor(
+      topLeft.x /
+      spacing
+    ) *
+    spacing;
+
+
+  const endX =
+    Math.ceil(
+      bottomRight.x /
+      spacing
+    ) *
+    spacing;
+
+
+  const startY =
+    Math.floor(
+      topLeft.y /
+      spacing
+    ) *
+    spacing;
+
+
+  const endY =
+    Math.ceil(
+      bottomRight.y /
+      spacing
+    ) *
+    spacing;
+
+
+  ctx.save();
+
+
+  ctx.translate(
+    camera.x,
+    camera.y
+  );
+
+
+  ctx.scale(
+    camera.zoom,
+    camera.zoom
+  );
+
+
+  ctx.strokeStyle =
+    "rgba(100,116,139,.10)";
+
+
+  ctx.lineWidth =
+    1 /
+    camera.zoom;
+
+
+  /*
+   * Vertical.
+   */
+
+  for (
+    let x = startX;
+    x <= endX;
+    x += spacing
+  ) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      x,
+      startY
+    );
+
+    ctx.lineTo(
+      x,
+      endY
+    );
+
+    ctx.stroke();
+
+  }
+
+
+  /*
+   * Horizontal.
+   */
+
+  for (
+    let y = startY;
+    y <= endY;
+    y += spacing
+  ) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      startX,
+      y
+    );
+
+    ctx.lineTo(
+      endX,
+      y
+    );
+
+    ctx.stroke();
+
+  }
+
+
+  ctx.restore();
+
+}
+
+
+/* ============================================================
+   RULER STEP
+   ============================================================ */
+
+function getRulerStep() {
+
+  const target =
+    85 /
+    camera.zoom;
+
+
+  const steps = [
+
+    18.75,
+    37.5,
+    75,
+    150,
+    300,
+    600,
+    1500,
+    3000
+
+  ];
+
+
+  for (
+    const step of steps
+  ) {
+
+    if (
+      step >= target
+    ) {
+
+      return step;
+
+    }
+
+  }
+
+
+  return 3000;
+
+}
+
+
+/* ============================================================
+   TOP RULER
+   ============================================================ */
+
+function drawTopRuler() {
+
+  const width =
+    viewportWidth - 32;
+
+
+  const height =
+    32;
+
+
+  const canvas =
+    document.createElement(
+      "canvas"
+    );
+
+
+  canvas.width =
+    width * dpr;
+
+
+  canvas.height =
+    height * dpr;
+
+
+  canvas.style.width =
+    `${width}px`;
+
+
+  canvas.style.height =
+    `${height}px`;
+
+
+  const ruler =
+    canvas.getContext(
+      "2d"
+    );
+
+
+  ruler.setTransform(
+
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+
+  );
+
+
+  ruler.fillStyle =
+    "#f8fafc";
+
+
+  ruler.fillRect(
+
+    0,
+    0,
+
+    width,
+    height
+
+  );
+
+
+  const step =
+    getRulerStep();
+
+
+  const start =
+    screenToWorld(
+      32,
+      0
+    ).x;
+
+
+  const end =
+    screenToWorld(
+      viewportWidth,
+      0
+    ).x;
+
+
+  const first =
+    Math.floor(
+      start / step
+    ) *
+    step;
+
+
+  ruler.strokeStyle =
+    "#94a3b8";
+
+
+  ruler.fillStyle =
+    "#475569";
+
+
+  ruler.font =
+    "9px Arial";
+
+
+  ruler.textAlign =
+    "center";
+
+
+  ruler.textBaseline =
+    "top";
+
+
+  for (
+    let value = first;
+    value <= end;
+    value += step
+  ) {
+
+    const screen =
+      worldToScreen(
+        value,
+        0
+      );
+
+
+    const x =
+      screen.x - 32;
+
+
+    ruler.beginPath();
+
+
+    ruler.moveTo(
+      x,
+      32
+    );
+
+
+    ruler.lineTo(
+      x,
+      20
+    );
+
+
+    ruler.stroke();
+
+
+    const inches =
+      value /
+      DPI;
+
+
+    ruler.fillText(
+
+      Number.isInteger(
+        inches
+      )
+        ? `${inches}"`
+        : `${inches.toFixed(2)}"`,
+
+      x,
+      3
+
+    );
+
+  }
+
+
+  topRuler.replaceChildren(
+    canvas
+  );
+
+}
+
+
+/* ============================================================
+   LEFT RULER
+   ============================================================ */
+
+function drawLeftRuler() {
+
+  const width =
+    32;
+
+
+  const height =
+    viewportHeight - 32;
+
+
+  const canvas =
+    document.createElement(
+      "canvas"
+    );
+
+
+  canvas.width =
+    width * dpr;
+
+
+  canvas.height =
+    height * dpr;
+
+
+  canvas.style.width =
+    `${width}px`;
+
+
+  canvas.style.height =
+    `${height}px`;
+
+
+  const ruler =
+    canvas.getContext(
+      "2d"
+    );
+
+
+  ruler.setTransform(
+
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+
+  );
+
+
+  ruler.fillStyle =
+    "#f8fafc";
+
+
+  ruler.fillRect(
+
+    0,
+    0,
+
+    width,
+    height
+
+  );
+
+
+  const step =
+    getRulerStep();
+
+
+  const start =
+    screenToWorld(
+      0,
+      32
+    ).y;
+
+
+  const end =
+    screenToWorld(
+      0,
+      viewportHeight
+    ).y;
+
+
+  const first =
+    Math.floor(
+      start / step
+    ) *
+    step;
+
+
+  ruler.strokeStyle =
+    "#94a3b8";
+
+
+  ruler.fillStyle =
+    "#475569";
+
+
+  ruler.font =
+    "9px Arial";
+
+
+  ruler.textAlign =
+    "left";
+
+
+  ruler.textBaseline =
+    "middle";
+
+
+  for (
+    let value = first;
+    value <= end;
+    value += step
+  ) {
+
+    const screen =
+      worldToScreen(
+        0,
+        value
+      );
+
+
+    const y =
+      screen.y - 32;
+
+
+    ruler.beginPath();
+
+
+    ruler.moveTo(
+      32,
+      y
+    );
+
+
+    ruler.lineTo(
+      20,
+      y
+    );
+
+
+    ruler.stroke();
+
+
+    const inches =
+      value /
+      DPI;
+
+
+    ruler.fillText(
+
+      Number.isInteger(
+        inches
+      )
+        ? `${inches}"`
+        : `${inches.toFixed(2)}"`,
+
+      3,
+      y
+
+    );
+
+  }
+
+
+  leftRuler.replaceChildren(
+    canvas
+  );
+
+}
+
+
+/* ============================================================
+   RULERS
+   ============================================================ */
+
+function drawRulers() {
+
+  drawTopRuler();
+
+  drawLeftRuler();
+
+}
+
+
+/* ============================================================
+   MAIN RENDER
+   ============================================================ */
+
+function render() {
+
+  /*
+   * Device pixel ratio.
+   */
+
+  ctx.setTransform(
+
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+
+  );
+
+
+  /*
+   * Clear.
+   */
+
+  ctx.clearRect(
+
+    0,
+    0,
+
+    viewportWidth,
+    viewportHeight
+
+  );
+
+
+  /*
+   * Workspace.
+   */
+
+  ctx.fillStyle =
+    "#d1d5db";
+
+
+  ctx.fillRect(
+
+    0,
+    0,
+
+    viewportWidth,
+    viewportHeight
+
+  );
+
+
+  /*
+   * Workspace reference grid.
+   */
+
+  drawWorkspaceGrid();
+
+
+  /*
+   * Print sheet.
+   */
+
+  if (sheetCanvas) {
+
+    drawSheet();
+
+  } else {
+
+    ctx.fillStyle =
+      "#64748b";
+
+
+    ctx.font =
+      "14px Arial";
+
+
+    ctx.textAlign =
+      "center";
+
+
+    ctx.textBaseline =
+      "middle";
+
+
+    ctx.fillText(
+
+      "Upload an image to begin",
+
+      viewportWidth / 2,
+
+      viewportHeight / 2
+
+    );
+
+  }
+
+
+  /*
+   * Fixed rulers.
+   */
+
+  drawRulers();
+
+}
+
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+function updateStatus() {
+
+  if (!sheetCanvas) {
+    return;
+  }
+
+
+  const paper =
+    getPaper();
+
+
+  status.textContent =
+    `${layout.paper} · ${
+      layout.landscape
+        ? "Landscape"
+        : "Portrait"
+    } · ${
+      layout.rows
+    } × ${
+      layout.columns
+    } · ${
+      paper.width
+    } × ${
+      paper.height
+    } px`;
+
+}
+
+
+/* ============================================================
+   INITIALIZE
+   ============================================================ */
+
+resizeViewport();
+
+</script>
+
+</body>
+</html>

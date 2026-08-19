@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>RC Crop Print</title>
+  <!-- Tailwind CSS v4 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- Cropper.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+  <!-- Application CSS -->
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+  <div id="app">
+    <!-- =====================================================
+       CANVAS VIEWPORT
+       ===================================================== -->
+    <div id="viewport">
+      <canvas id="viewportCanvas"></canvas>
+    </div>
+    <!-- =====================================================
+       RULERS
+       ===================================================== -->
+    <div id="topRuler"></div>
+    <div id="leftRuler"></div>
+    <div id="rulerCorner"></div>
+    <!-- =====================================================
+       HEADER
+       ===================================================== -->
+    <header
+      class="absolute left-10 top-10 z-50 flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white/95 p-1.5 shadow-lg">
+      <div class="px-1 text-xs font-semibold max-sm:hidden">
+        RC Crop Print
+      </div>
+      <label
+        class="flex h-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white px-2.5 text-[11px] font-semibold leading-none text-gray-800 hover:bg-gray-100">
+        Upload Image
+        <input id="sourceInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+      </label>
+    </header>
+    <!-- =====================================================
+       PRINT LAYOUT PANEL
+       ===================================================== -->
+    <aside id="layoutPanel"
+      class="absolute right-3.5 top-10 z-50 w-48 rounded-lg border border-gray-300 bg-white p-2.5 shadow-xl max-sm:top-[84px] max-sm:right-2">
+      <div class="mb-2 flex items-center justify-between">
+        <div class="text-xs font-semibold leading-none text-gray-800">
+          Print Layout
+        </div>
+        <button id="closeLayoutButton" type="button"
+          class="flex h-6 w-6 items-center justify-center rounded-[5px] border border-gray-300 bg-white p-0 text-sm leading-none text-gray-700 hover:bg-gray-100">
+          ×
+        </button>
+      </div>
+      <!-- Paper -->
+      <div class="mb-1.5">
+        <label for="paperSize" class="mb-1 block text-[10px] font-semibold leading-tight text-gray-500">
+          Paper Size
+        </label>
+        <select id="paperSize"
+          class="h-7.5 w-full rounded-[5px] border border-gray-300 bg-white px-1.5 text-[10px] leading-none text-gray-700 outline-none focus:border-blue-500">
+          <option value="A4">
+            A4
+          </option>
+          <option value="4x6">
+            4 × 6
+          </option>
+          <option value="5x7">
+            5 × 7
+          </option>
+        </select>
+      </div>
+      <!-- Rows / Columns -->
+      <div class="mb-1.5">
+        <label class="mb-1 block text-[10px] font-semibold leading-tight text-gray-500">
+          Rows / Columns
+        </label>
+        <div class="grid grid-cols-2 gap-1">
+          <input id="rows" type="number" min="1" max="10" value="3"
+            class="h-7.5 w-full rounded-[5px] border border-gray-300 px-1.5 text-[10px] leading-none text-gray-700 outline-none focus:border-blue-500">
+          <input id="columns" type="number" min="1" max="10" value="2"
+            class="h-7.5 w-full rounded-[5px] border border-gray-300 px-1.5 text-[10px] leading-none text-gray-700 outline-none focus:border-blue-500">
+        </div>
+      </div>
+      <!-- Slot background -->
+      <div class="mb-1.5">
+        <label for="slotColor" class="mb-1 block text-[10px] font-semibold leading-tight text-gray-500">
+          Slot Background
+        </label>
+        <div class="flex items-center gap-1.5">
+          <input id="slotColor" type="color" value="#ffffff"
+            class="h-7.5 w-8 cursor-pointer rounded-[5px] border border-gray-300 bg-white p-0.5">
+          <span id="slotColorText" class="text-[10px] leading-none text-gray-600">
+            #ffffff
+          </span>
+        </div>
+      </div>
+      <!-- Paper orientation -->
+      <div class="mb-1.5">
+        <label class="mb-1 block text-[10px] font-semibold leading-tight text-gray-500">
+          Paper Orientation
+        </label>
+        <div class="flex gap-1">
+          <button id="portraitButton" type="button"
+            class="h-7.5 flex-1 rounded-[5px] border border-gray-900 bg-gray-900 px-1.5 text-[10px] font-medium leading-none text-white">
+            Portrait
+          </button>
+          <button id="landscapeButton" type="button"
+            class="h-7.5 flex-1 rounded-[5px] border border-gray-300 bg-white px-1.5 text-[10px] font-medium leading-none text-gray-700 hover:bg-gray-100">
+            Landscape
+          </button>
+        </div>
+      </div>
+      <!-- Image orientation -->
+      <div>
+        <label class="mb-1 block text-[10px] font-semibold leading-tight text-gray-500">
+          Image Orientation
+        </label>
+        <button id="rotateImageButton" type="button"
+          class="flex h-7.5 w-full items-center justify-center gap-1 rounded-[5px] border border-gray-300 bg-white px-2 text-[10px] font-semibold leading-none text-gray-700 hover:bg-gray-100">
+          <span class="text-[12px]">
+            ↶
+          </span>
+          <span id="rotateText">
+            Rotate −90°
+          </span>
+        </button>
+      </div>
+    </aside>
+    <!-- =====================================================
+       SHOW LAYOUT BUTTON
+       ===================================================== -->
+    <button id="showLayoutButton" type="button"
+      class="absolute right-3.5 top-10 z-45 hidden h-8 rounded-md border border-gray-300 bg-white px-2.5 text-[11px] font-semibold leading-none text-gray-700 shadow-lg hover:bg-gray-100">
+      Layout
+    </button>
+    <!-- =====================================================
+       STATUS
+       ===================================================== -->
+    <div id="status"
+      class="pointer-events-none absolute bottom-4 left-10 z-40 rounded-md border border-gray-300 bg-white/95 px-2 py-1.5 text-[10px] leading-none text-gray-600 max-sm:hidden">
+      Upload an image
+    </div>
+    <!-- =====================================================
+       BOTTOM TOOLBAR
+       ===================================================== -->
+    <div
+      class="absolute bottom-3 left-1/2 z-[60] flex w-[calc(100vw-16px)] max-w-200 -translate-x-1/2 items-center rounded-lg border border-gray-300 bg-white/96 p-1.5 shadow-xl">
+      <!-- Center tools -->
+      <div class="mx-auto flex items-center gap-1 overflow-x-auto" style="scrollbar-width:none">
+        <!-- Zoom Out -->
+        <button id="zoomOut" type="button"
+          class="h-8 w-8 shrink-0 rounded-md border border-gray-300 bg-white p-0 text-sm font-semibold leading-none text-gray-800 hover:bg-gray-100">
+          −
+        </button>
+        <!-- Zoom -->
+        <span id="zoomText"
+          class="min-w-12.5 shrink-0 text-center text-[10px] font-semibold leading-none text-gray-700">
+          100%
+        </span>
+        <!-- Zoom In -->
+        <button id="zoomIn" type="button"
+          class="h-8 w-8 shrink-0 rounded-md border border-gray-300 bg-white p-0 text-sm font-semibold leading-none text-gray-800 hover:bg-gray-100">
+          +
+        </button>
+        <!-- Fit -->
+        <button id="fitButton" type="button"
+          class="h-8 shrink-0 rounded-md border border-gray-300 bg-white px-2 text-[10px] font-semibold leading-none text-gray-700 hover:bg-gray-100">
+          Fit
+        </button>
+        <!-- Actual Size -->
+        <button id="actualButton" type="button"
+          class="h-8 shrink-0 rounded-md border border-gray-300 bg-white px-2 text-[10px] font-semibold leading-none text-gray-700 hover:bg-gray-100">
+          100%
+        </button>
+        <!-- Ruler Unit -->
+        <select id="rulerUnit"
+          class="h-8 shrink-0 rounded-md border border-gray-300 bg-white px-1.5 text-[10px] font-semibold leading-none text-gray-700 outline-none"
+          title="Ruler unit">
+          <option value="in">
+            in
+          </option>
+          <option value="cm">
+            cm
+          </option>
+          <option value="mm">
+            mm
+          </option>
+        </select>
+        <!-- Layout -->
+        <button id="layoutButton" type="button"
+          class="h-8 shrink-0 rounded-md border border-gray-300 bg-white px-2 text-[10px] font-semibold leading-none text-gray-700 hover:bg-gray-100">
+          Layout
+        </button>
+      </div>
+      <!-- =================================================
+         FIXED RIGHT DOWNLOAD BUTTON
+         ================================================= -->
+      <button id="downloadButton" type="button"
+        class="ml-1 h-8 shrink-0 rounded-md border border-gray-300 bg-white px-2.5 text-[10px] font-semibold leading-none text-gray-700 hover:bg-gray-100">
+        Download
+      </button>
+    </div>
+    <!-- =====================================================
+       CROP MODAL
+       ===================================================== -->
+    <section id="cropModal">
+      <!-- Crop header -->
+      <header class="flex min-h-14 shrink-0 items-center justify-between bg-black/95 px-3 py-2 text-white">
+        <div class="text-xs font-semibold leading-none">
+          Crop Image
+        </div>
+        <div class="flex items-center gap-1">
+          <button id="cropRotateLeft" type="button"
+            class="flex h-8 w-8 items-center justify-center rounded-md border border-gray-600 bg-neutral-800 p-0 text-sm leading-none text-white">
+            ↶
+          </button>
+          <button id="cropRotateRight" type="button"
+            class="flex h-8 w-8 items-center justify-center rounded-md border border-gray-600 bg-neutral-800 p-0 text-sm leading-none text-white">
+            ↷
+          </button>
+          <button id="cropCancel" type="button"
+            class="h-8 rounded-md border border-gray-600 bg-neutral-800 px-2 text-[10px] font-semibold leading-none text-white">
+            Cancel
+          </button>
+        </div>
+      </header>
+      <!-- Crop image -->
+      <div class="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+        <div class="crop-image-wrap">
+          <img id="cropImage" alt="Image to crop">
+        </div>
+      </div>
+      <!-- Crop controls -->
+      <footer
+        class="crop-footer flex min-h-14 shrink-0 items-center justify-center gap-1 overflow-x-auto bg-black/95 p-2.5 max-sm:justify-start">
+        <button type="button"
+          class="ratioButton shrink-0 rounded-md border border-white bg-white px-2.5 py-1.5 text-[10px] font-semibold leading-none text-gray-900"
+          data-ratio="0">
+          Free
+        </button>
+        <button type="button"
+          class="ratioButton shrink-0 rounded-md border border-gray-600 bg-neutral-800 px-2.5 py-1.5 text-[10px] font-semibold leading-none text-white"
+          data-ratio="0.6666666667">
+          2:3
+        </button>
+        <button type="button"
+          class="ratioButton shrink-0 rounded-md border border-gray-600 bg-neutral-800 px-2.5 py-1.5 text-[10px] font-semibold leading-none text-white"
+          data-ratio="1.5">
+          3:2
+        </button>
+        <button type="button"
+          class="ratioButton shrink-0 rounded-md border border-gray-600 bg-neutral-800 px-2.5 py-1.5 text-[10px] font-semibold leading-none text-white"
+          data-ratio="0.8">
+          4:5
+        </button>
+        <button type="button"
+          class="ratioButton shrink-0 rounded-md border border-gray-600 bg-neutral-800 px-2.5 py-1.5 text-[10px] font-semibold leading-none text-white"
+          data-ratio="1.25">
+          5:4
+        </button>
+        <button type="button"
+          class="ratioButton shrink-0 rounded-md border border-gray-600 bg-neutral-800 px-2.5 py-1.5 text-[10px] font-semibold leading-none text-white"
+          data-ratio="1">
+          1:1
+        </button>
+        <button id="cropApply" type="button"
+          class="ml-1.5 shrink-0 rounded-md border border-blue-600 bg-blue-600 px-3 py-1.5 text-[10px] font-semibold leading-none text-white">
+          Crop
+        </button>
+      </footer>
+    </section>
+  </div>
+  <!-- =======================================================
+     CROPPER.JS
+     ======================================================= -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+  <!-- =======================================================
+     APPLICATION JS
+     ======================================================= -->
+  <script src="./app.js"></script>
+</body>
+
+</html>

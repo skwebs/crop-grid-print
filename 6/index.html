@@ -1,0 +1,4086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+/>
+
+<title>RC Crop Print</title>
+
+<!-- Cropper.js -->
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css"
+/>
+
+<style>
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+
+  overflow: hidden;
+
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  background: #d1d5db;
+
+  overscroll-behavior: none;
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+button {
+  height: 34px;
+
+  padding: 0 10px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+
+  background: #fff;
+
+  color: #111827;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+button:hover {
+  background: #f3f4f6;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+
+/* =========================================================
+   APP
+   ========================================================= */
+
+#app {
+  position: fixed;
+  inset: 0;
+
+  width: 100%;
+  height: 100dvh;
+
+  overflow: hidden;
+}
+
+
+/* =========================================================
+   VIEWPORT
+   ========================================================= */
+
+#viewport {
+  position: absolute;
+  inset: 0;
+
+  overflow: hidden;
+
+  background: #d1d5db;
+
+  touch-action: none;
+  user-select: none;
+
+  cursor: grab;
+}
+
+#viewport.dragging {
+  cursor: grabbing;
+}
+
+#viewportCanvas {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  touch-action: none;
+}
+
+
+/* =========================================================
+   CANVAS UI TRANSPARENCY
+   ========================================================= */
+
+.floating-ui {
+  transition:
+    opacity 180ms ease,
+    filter 180ms ease;
+}
+
+#app.canvas-active .floating-ui {
+  opacity: .28;
+}
+
+#app.canvas-active .floating-ui:hover,
+#app.canvas-active .floating-ui:focus-within {
+  opacity: 1;
+}
+
+
+/* =========================================================
+   RULERS
+   ========================================================= */
+
+#topRuler {
+  position: absolute;
+  z-index: 20;
+
+  top: 0;
+  left: 32px;
+  right: 0;
+
+  height: 32px;
+
+  overflow: hidden;
+
+  background: #f8fafc;
+
+  border-bottom: 1px solid #cbd5e1;
+
+  pointer-events: none;
+}
+
+#leftRuler {
+  position: absolute;
+  z-index: 20;
+
+  top: 32px;
+  left: 0;
+  bottom: 0;
+
+  width: 32px;
+
+  overflow: hidden;
+
+  background: #f8fafc;
+
+  border-right: 1px solid #cbd5e1;
+
+  pointer-events: none;
+}
+
+#rulerCorner {
+  position: absolute;
+  z-index: 30;
+
+  top: 0;
+  left: 0;
+
+  width: 32px;
+  height: 32px;
+
+  background: #f1f5f9;
+
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.header {
+  position: absolute;
+  z-index: 50;
+
+  top: 42px;
+  left: 42px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 7px;
+
+  background: rgba(255,255,255,.96);
+
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+
+  box-shadow:
+    0 4px 16px rgba(0,0,0,.12);
+}
+
+.brand {
+  padding: 0 5px;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 34px;
+
+  padding: 0 10px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+
+  background: #fff;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+#sourceInput {
+  display: none;
+}
+
+
+/* =========================================================
+   PRINT LAYOUT
+   ========================================================= */
+
+#layoutPanel {
+  position: absolute;
+  z-index: 50;
+
+  top: 42px;
+  right: 14px;
+
+  width: 215px;
+
+  padding: 12px;
+
+  background: rgba(255,255,255,.97);
+
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+
+  box-shadow:
+    0 5px 20px rgba(0,0,0,.14);
+}
+
+#layoutPanel.hidden {
+  display: none;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 10px;
+}
+
+.panelTitle {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.closePanel {
+  width: 28px;
+  height: 28px;
+
+  padding: 0;
+
+  font-size: 16px;
+}
+
+.field {
+  margin-bottom: 9px;
+}
+
+.field label {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color: #4b5563;
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.field select,
+.field input[type="number"] {
+  width: 100%;
+  height: 32px;
+
+  padding: 0 8px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+
+  background: #fff;
+
+  outline: none;
+
+  font-size: 12px;
+}
+
+.twoFields {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 7px;
+}
+
+.orientation {
+  display: flex;
+
+  gap: 6px;
+}
+
+.orientation button {
+  flex: 1;
+}
+
+.orientation button.active {
+  background: #111827;
+
+  border-color: #111827;
+
+  color: white;
+}
+
+.colorRow {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+#slotColor {
+  width: 38px;
+  height: 32px;
+
+  padding: 2px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+#showLayoutButton {
+  position: absolute;
+  z-index: 45;
+
+  top: 42px;
+  right: 14px;
+
+  display: none;
+}
+
+#showLayoutButton.visible {
+  display: block;
+}
+
+
+/* =========================================================
+   TOOLBAR
+   ========================================================= */
+
+.toolbar {
+  position: absolute;
+  z-index: 50;
+
+  left: 50%;
+  bottom: 12px;
+
+  transform: translateX(-50%);
+
+  display: flex;
+  align-items: center;
+
+  gap: 5px;
+
+  max-width: calc(100vw - 20px);
+
+  padding: 7px;
+
+  background: rgba(255,255,255,.96);
+
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+
+  box-shadow:
+    0 5px 20px rgba(0,0,0,.14);
+
+  overflow-x: auto;
+
+  scrollbar-width: none;
+}
+
+.toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+#zoomText {
+  min-width: 54px;
+
+  text-align: center;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   CROP MODAL
+   ========================================================= */
+
+#cropModal {
+  position: fixed;
+  z-index: 200;
+
+  inset: 0;
+
+  display: none;
+
+  background: rgba(0,0,0,.82);
+}
+
+#cropModal.visible {
+  display: flex;
+
+  flex-direction: column;
+}
+
+.cropHeader {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 56px;
+
+  padding: 10px 14px;
+
+  background: rgba(20,20,20,.95);
+
+  color: white;
+}
+
+.cropTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cropHeaderActions {
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+}
+
+.cropHeader button {
+  border-color: #4b5563;
+
+  background: #262626;
+
+  color: white;
+}
+
+.cropBody {
+  position: relative;
+
+  flex: 1;
+
+  min-height: 0;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+}
+
+.cropImageWrap {
+  width: min(94vw, 1100px);
+  height: min(78vh, 760px);
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+}
+
+#cropImage {
+  display: block;
+
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.cropFooter {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  min-height: 58px;
+
+  padding: 10px;
+
+  background: rgba(20,20,20,.95);
+}
+
+.ratioButton {
+  min-width: 62px;
+
+  border-color: #4b5563;
+
+  background: #262626;
+
+  color: white;
+}
+
+.ratioButton.active {
+  background: #fff;
+
+  border-color: #fff;
+
+  color: #111827;
+}
+
+.cropAction {
+  margin-left: 8px;
+
+  background: #fff;
+
+  border-color: #fff;
+
+  color: #111827;
+}
+
+.cropAction.primary {
+  background: #2563eb;
+
+  border-color: #2563eb;
+
+  color: white;
+}
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+#status {
+  position: absolute;
+  z-index: 40;
+
+  left: 42px;
+  bottom: 16px;
+
+  padding: 7px 9px;
+
+  background: rgba(255,255,255,.94);
+
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+
+  color: #374151;
+
+  font-size: 11px;
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .header {
+    top: 40px;
+    left: 40px;
+  }
+
+  .brand {
+    display: none;
+  }
+
+  #layoutPanel {
+    top: 88px;
+    right: 10px;
+
+    width: 185px;
+  }
+
+  #showLayoutButton {
+    top: 40px;
+    right: 10px;
+  }
+
+  #status {
+    display: none;
+  }
+
+  .cropImageWrap {
+    width: 96vw;
+    height: 72vh;
+  }
+
+  .cropFooter {
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .ratioButton {
+    flex-shrink: 0;
+  }
+
+}
+
+</style>
+</head>
+
+
+<body>
+
+<div id="app">
+
+
+  <!-- =====================================================
+       CANVAS
+       ====================================================== -->
+
+  <div id="viewport">
+
+    <canvas id="viewportCanvas"></canvas>
+
+  </div>
+
+
+  <!-- =====================================================
+       RULERS
+       ====================================================== -->
+
+  <div id="topRuler"></div>
+
+  <div id="leftRuler"></div>
+
+  <div id="rulerCorner"></div>
+
+
+  <!-- =====================================================
+       HEADER
+       ====================================================== -->
+
+  <header class="header floating-ui">
+
+    <div class="brand">
+      RC Crop Print
+    </div>
+
+    <label class="upload">
+
+      Upload Image
+
+      <input
+        id="sourceInput"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+      >
+
+    </label>
+
+  </header>
+
+
+  <!-- =====================================================
+       SHOW LAYOUT
+       ====================================================== -->
+
+  <button
+    id="showLayoutButton"
+    class="floating-ui"
+  >
+    Print Layout
+  </button>
+
+
+  <!-- =====================================================
+       PRINT LAYOUT
+       ====================================================== -->
+
+  <aside
+    id="layoutPanel"
+    class="floating-ui"
+  >
+
+    <div class="panelHeader">
+
+      <div class="panelTitle">
+        Print Layout
+      </div>
+
+      <button
+        id="closeLayoutButton"
+        class="closePanel"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <div class="field">
+
+      <label for="paperSize">
+        Paper Size
+      </label>
+
+      <select id="paperSize">
+
+        <option value="A4">
+          A4
+        </option>
+
+        <option value="4x6">
+          4 × 6
+        </option>
+
+        <option value="5x7">
+          5 × 7
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Rows / Columns
+      </label>
+
+      <div class="twoFields">
+
+        <input
+          id="rows"
+          type="number"
+          min="1"
+          max="10"
+          value="3"
+        >
+
+        <input
+          id="columns"
+          type="number"
+          min="1"
+          max="10"
+          value="2"
+        >
+
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label for="slotColor">
+        Slot Background
+      </label>
+
+      <div class="colorRow">
+
+        <input
+          id="slotColor"
+          type="color"
+          value="#ffffff"
+        >
+
+        <span id="slotColorText">
+          #ffffff
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Orientation
+      </label>
+
+      <div class="orientation">
+
+        <button
+          id="portraitButton"
+          class="active"
+        >
+          Portrait
+        </button>
+
+        <button
+          id="landscapeButton"
+        >
+          Landscape
+        </button>
+
+      </div>
+
+    </div>
+
+  </aside>
+
+
+  <!-- =====================================================
+       STATUS
+       ====================================================== -->
+
+  <div id="status">
+    Upload an image
+  </div>
+
+
+  <!-- =====================================================
+       BOTTOM TOOLBAR
+       ====================================================== -->
+
+  <div class="toolbar floating-ui">
+
+    <button id="zoomOut">
+      −
+    </button>
+
+    <span id="zoomText">
+      100%
+    </span>
+
+    <button id="zoomIn">
+      +
+    </button>
+
+    <button id="fitButton">
+      Fit
+    </button>
+
+    <button id="actualButton">
+      100%
+    </button>
+
+    <button id="layoutButton">
+      Layout
+    </button>
+
+    <button id="downloadButton">
+      Download
+    </button>
+
+  </div>
+
+
+  <!-- =====================================================
+       CROP MODAL
+       ====================================================== -->
+
+  <section id="cropModal">
+
+    <header class="cropHeader">
+
+      <div class="cropTitle">
+        Crop Image
+      </div>
+
+      <div class="cropHeaderActions">
+
+        <button id="cropRotateLeft">
+          ↶
+        </button>
+
+        <button id="cropRotateRight">
+          ↷
+        </button>
+
+        <button id="cropCancel">
+          Cancel
+        </button>
+
+      </div>
+
+    </header>
+
+
+    <div class="cropBody">
+
+      <div class="cropImageWrap">
+
+        <img
+          id="cropImage"
+          alt="Image to crop"
+        >
+
+      </div>
+
+    </div>
+
+
+    <footer class="cropFooter">
+
+      <button
+        class="ratioButton active"
+        data-ratio="0"
+      >
+        Free
+      </button>
+
+      <button
+        class="ratioButton"
+        data-ratio="0.6666666667"
+      >
+        2:3
+      </button>
+
+      <button
+        class="ratioButton"
+        data-ratio="1.5"
+      >
+        3:2
+      </button>
+
+      <button
+        class="ratioButton"
+        data-ratio="0.8"
+      >
+        4:5
+      </button>
+
+      <button
+        class="ratioButton"
+        data-ratio="1.25"
+      >
+        5:4
+      </button>
+
+      <button
+        class="ratioButton"
+        data-ratio="1"
+      >
+        1:1
+      </button>
+
+      <button
+        id="cropApply"
+        class="cropAction primary"
+      >
+        Crop
+      </button>
+
+    </footer>
+
+  </section>
+
+</div>
+
+
+<!-- Cropper.js -->
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"
+></script>
+
+
+<script>
+
+/* ============================================================
+   DOM
+   ============================================================ */
+
+const app =
+  document.getElementById("app");
+
+const viewport =
+  document.getElementById("viewport");
+
+const viewportCanvas =
+  document.getElementById("viewportCanvas");
+
+const ctx =
+  viewportCanvas.getContext("2d");
+
+const topRuler =
+  document.getElementById("topRuler");
+
+const leftRuler =
+  document.getElementById("leftRuler");
+
+const sourceInput =
+  document.getElementById("sourceInput");
+
+const layoutPanel =
+  document.getElementById("layoutPanel");
+
+const showLayoutButton =
+  document.getElementById("showLayoutButton");
+
+const closeLayoutButton =
+  document.getElementById("closeLayoutButton");
+
+const layoutButton =
+  document.getElementById("layoutButton");
+
+const paperSize =
+  document.getElementById("paperSize");
+
+const rowsInput =
+  document.getElementById("rows");
+
+const columnsInput =
+  document.getElementById("columns");
+
+const slotColor =
+  document.getElementById("slotColor");
+
+const slotColorText =
+  document.getElementById("slotColorText");
+
+const portraitButton =
+  document.getElementById("portraitButton");
+
+const landscapeButton =
+  document.getElementById("landscapeButton");
+
+const zoomText =
+  document.getElementById("zoomText");
+
+const status =
+  document.getElementById("status");
+
+const downloadButton =
+  document.getElementById("downloadButton");
+
+
+/* ============================================================
+   CROP DOM
+   ============================================================ */
+
+const cropModal =
+  document.getElementById("cropModal");
+
+const cropImage =
+  document.getElementById("cropImage");
+
+const cropApply =
+  document.getElementById("cropApply");
+
+const cropCancel =
+  document.getElementById("cropCancel");
+
+const cropRotateLeft =
+  document.getElementById("cropRotateLeft");
+
+const cropRotateRight =
+  document.getElementById("cropRotateRight");
+
+const ratioButtons =
+  document.querySelectorAll(
+    ".ratioButton"
+  );
+
+
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+
+const DPI = 300;
+
+const PHOTO_WIDTH = 360;
+
+const PHOTO_HEIGHT = 450;
+
+const MIN_ZOOM = 0.05;
+
+const MAX_ZOOM = 8;
+
+
+/* ============================================================
+   PAPER SIZES
+   ============================================================ */
+
+const PAPER_SIZES = {
+
+  A4: {
+    width: 2480,
+    height: 3505
+  },
+
+  "4x6": {
+    width: 1200,
+    height: 1800
+  },
+
+  "5x7": {
+    width: 1500,
+    height: 2100
+  }
+
+};
+
+
+/* ============================================================
+   STATE
+   ============================================================ */
+
+let dpr =
+  window.devicePixelRatio || 1;
+
+let viewportWidth = 0;
+
+let viewportHeight = 0;
+
+
+/*
+ * Original uploaded image.
+ */
+
+let sourceImage = null;
+
+
+/*
+ * Cropped image generated by Cropper.js.
+ */
+
+let croppedCanvas = null;
+
+
+/*
+ * Generated print sheet.
+ */
+
+let sheetCanvas = null;
+
+
+/*
+ * Cropper instance.
+ */
+
+let cropper = null;
+
+
+/*
+ * Temporary upload URL.
+ */
+
+let cropObjectUrl = null;
+
+
+/*
+ * Prevents accidental first-render fitting.
+ */
+
+let hasGeneratedSheet = false;
+
+
+/*
+ * Debounce timer.
+ */
+
+let sheetUpdateTimer = null;
+
+
+/*
+ * Hide UI timer.
+ */
+
+let uiInteractionTimer = null;
+
+
+/*
+ * Layout state.
+ */
+
+const layout = {
+
+  paper: "A4",
+
+  rows: 3,
+
+  columns: 2,
+
+  landscape: false,
+
+  slotColor: "#ffffff",
+
+  gap: 40
+
+};
+
+
+/*
+ * Camera.
+ */
+
+const camera = {
+
+  x: 0,
+
+  y: 0,
+
+  zoom: 1
+
+};
+
+
+/* ============================================================
+   CANVAS INTERACTION UI
+   ============================================================ */
+
+function markCanvasInteraction() {
+
+  app.classList.add(
+    "canvas-active"
+  );
+
+
+  clearTimeout(
+    uiInteractionTimer
+  );
+
+
+  uiInteractionTimer =
+    setTimeout(
+      () => {
+
+        app.classList.remove(
+          "canvas-active"
+        );
+
+      },
+      700
+    );
+
+}
+
+
+/* ============================================================
+   RESIZE
+   ============================================================ */
+
+function resizeViewport() {
+
+  dpr =
+    window.devicePixelRatio || 1;
+
+  viewportWidth =
+    window.innerWidth;
+
+  viewportHeight =
+    window.innerHeight;
+
+
+  viewportCanvas.width =
+    viewportWidth * dpr;
+
+  viewportCanvas.height =
+    viewportHeight * dpr;
+
+
+  viewportCanvas.style.width =
+    `${viewportWidth}px`;
+
+  viewportCanvas.style.height =
+    `${viewportHeight}px`;
+
+
+  render();
+
+}
+
+
+window.addEventListener(
+  "resize",
+  resizeViewport
+);
+
+
+/* ============================================================
+   DEBOUNCE
+   ============================================================ */
+
+function scheduleSheetUpdate() {
+
+  clearTimeout(
+    sheetUpdateTimer
+  );
+
+
+  sheetUpdateTimer =
+    setTimeout(
+      () => {
+
+        sheetUpdateTimer =
+          null;
+
+        generateSheet();
+
+      },
+      120
+    );
+
+}
+
+
+/* ============================================================
+   CLAMP
+   ============================================================ */
+
+function clamp(
+  value,
+  min,
+  max
+) {
+
+  return Math.max(
+    min,
+    Math.min(
+      max,
+      value
+    )
+  );
+
+}
+
+
+/* ============================================================
+   COORDINATES
+   ============================================================ */
+
+function worldToScreen(
+  x,
+  y
+) {
+
+  return {
+
+    x:
+      x * camera.zoom +
+      camera.x,
+
+    y:
+      y * camera.zoom +
+      camera.y
+
+  };
+
+}
+
+
+function screenToWorld(
+  x,
+  y
+) {
+
+  return {
+
+    x:
+      (x - camera.x) /
+      camera.zoom,
+
+    y:
+      (y - camera.y) /
+      camera.zoom
+
+  };
+
+}
+
+
+/* ============================================================
+   ZOOM
+   ============================================================ */
+
+function zoomAt(
+  x,
+  y,
+  newZoom
+) {
+
+  newZoom =
+    clamp(
+      newZoom,
+      MIN_ZOOM,
+      MAX_ZOOM
+    );
+
+
+  const world =
+    screenToWorld(
+      x,
+      y
+    );
+
+
+  camera.zoom =
+    newZoom;
+
+
+  camera.x =
+    x -
+    world.x *
+      camera.zoom;
+
+
+  camera.y =
+    y -
+    world.y *
+      camera.zoom;
+
+
+  updateZoom();
+
+  render();
+
+}
+
+
+function zoomBy(
+  factor,
+  x,
+  y
+) {
+
+  zoomAt(
+
+    x,
+    y,
+
+    camera.zoom *
+      factor
+
+  );
+
+}
+
+
+function updateZoom() {
+
+  zoomText.textContent =
+    `${Math.round(
+      camera.zoom * 100
+    )}%`;
+
+}
+
+
+/* ============================================================
+   CROP WORKFLOW
+   ============================================================ */
+
+sourceInput.addEventListener(
+  "change",
+  event => {
+
+    const file =
+      event.target.files[0];
+
+
+    if (!file) {
+      return;
+    }
+
+
+    /*
+     * Clean previous object URL.
+     */
+
+    if (cropObjectUrl) {
+
+      URL.revokeObjectURL(
+        cropObjectUrl
+      );
+
+    }
+
+
+    cropObjectUrl =
+      URL.createObjectURL(
+        file
+      );
+
+
+    /*
+     * Open cropper immediately.
+     */
+
+    cropImage.src =
+      cropObjectUrl;
+
+
+    cropModal.classList.add(
+      "visible"
+    );
+
+
+    /*
+     * Destroy old Cropper instance.
+     */
+
+    if (cropper) {
+
+      cropper.destroy();
+
+      cropper =
+        null;
+
+    }
+
+
+    cropImage.onload =
+      () => {
+
+        cropper =
+          new Cropper(
+            cropImage,
+            {
+
+              viewMode: 1,
+
+              dragMode: "move",
+
+              autoCropArea: .85,
+
+              responsive: true,
+
+              restore: false,
+
+              guides: true,
+
+              center: true,
+
+              highlight: true,
+
+              background: false,
+
+              movable: true,
+
+              zoomable: true,
+
+              rotatable: true,
+
+              scalable: false,
+
+              cropBoxMovable: true,
+
+              cropBoxResizable: true,
+
+              toggleDragModeOnDblclick: false
+
+            }
+          );
+
+      };
+
+  }
+);
+
+
+/* ============================================================
+   CROP ASPECT RATIOS
+   ============================================================ */
+
+ratioButtons.forEach(
+  button => {
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        ratioButtons.forEach(
+          item => {
+
+            item.classList.remove(
+              "active"
+            );
+
+          }
+        );
+
+
+        button.classList.add(
+          "active"
+        );
+
+
+        if (!cropper) {
+          return;
+        }
+
+
+        const ratio =
+          Number(
+            button.dataset.ratio
+          );
+
+
+        cropper.setAspectRatio(
+          ratio
+        );
+
+      }
+    );
+
+  }
+);
+
+
+/* ============================================================
+   CROP ROTATION
+   ============================================================ */
+
+cropRotateLeft.addEventListener(
+  "click",
+  () => {
+
+    if (!cropper) {
+      return;
+    }
+
+
+    cropper.rotate(
+      -90
+    );
+
+  }
+);
+
+
+cropRotateRight.addEventListener(
+  "click",
+  () => {
+
+    if (!cropper) {
+      return;
+    }
+
+
+    cropper.rotate(
+      90
+    );
+
+  }
+);
+
+
+/* ============================================================
+   CANCEL CROP
+   ============================================================ */
+
+cropCancel.addEventListener(
+  "click",
+  () => {
+
+    closeCropper();
+
+  }
+);
+
+
+function closeCropper() {
+
+  cropModal.classList.remove(
+    "visible"
+  );
+
+
+  if (cropper) {
+
+    cropper.destroy();
+
+    cropper =
+      null;
+
+  }
+
+}
+
+
+/* ============================================================
+   APPLY CROP
+   ============================================================ */
+
+cropApply.addEventListener(
+  "click",
+  () => {
+
+    if (!cropper) {
+      return;
+    }
+
+
+    /*
+     * Export only the selected crop.
+     *
+     * This creates a new canvas.
+     * The original large image is no
+     * longer needed for grid rendering.
+     */
+
+    croppedCanvas =
+      cropper.getCroppedCanvas({
+
+        width:
+          PHOTO_WIDTH,
+
+        height:
+          PHOTO_HEIGHT,
+
+        imageSmoothingEnabled:
+          true,
+
+        imageSmoothingQuality:
+          "high",
+
+        fillColor:
+          "#ffffff"
+
+      });
+
+
+    /*
+     * Close cropper.
+     */
+
+    closeCropper();
+
+
+    /*
+     * Reset print preview.
+     */
+
+    sheetCanvas =
+      null;
+
+
+    hasGeneratedSheet =
+      false;
+
+
+    /*
+     * Generate immediately.
+     *
+     * The user has explicitly
+     * pressed Crop, so debounce
+     * is unnecessary here.
+     */
+
+    generateSheet();
+
+
+    status.textContent =
+      "Crop applied · 360 × 450 output";
+
+
+    /*
+     * Release the original image
+     * reference where possible.
+     */
+
+    sourceImage =
+      null;
+
+  }
+);
+
+
+/* ============================================================
+   PAPER
+   ============================================================ */
+
+function getPaper() {
+
+  const paper =
+    PAPER_SIZES[
+      layout.paper
+    ];
+
+
+  if (
+    layout.landscape
+  ) {
+
+    return {
+
+      width:
+        paper.height,
+
+      height:
+        paper.width
+
+    };
+
+  }
+
+
+  return paper;
+
+}
+
+
+/* ============================================================
+   GENERATE PRINT SHEET
+   ============================================================ */
+
+function generateSheet() {
+
+  if (!croppedCanvas) {
+    return;
+  }
+
+
+  /*
+   * Preserve camera when the user
+   * changes grid settings.
+   */
+
+  const oldZoom =
+    camera.zoom;
+
+  const oldX =
+    camera.x;
+
+  const oldY =
+    camera.y;
+
+
+  const paper =
+    getPaper();
+
+
+  sheetCanvas =
+    document.createElement(
+      "canvas"
+    );
+
+
+  sheetCanvas.width =
+    paper.width;
+
+  sheetCanvas.height =
+    paper.height;
+
+
+  const sheetContext =
+    sheetCanvas.getContext(
+      "2d"
+    );
+
+
+  /*
+   * Paper background.
+   */
+
+  sheetContext.fillStyle =
+    "#ffffff";
+
+
+  sheetContext.fillRect(
+
+    0,
+    0,
+
+    paper.width,
+    paper.height
+
+  );
+
+
+  const gap =
+    layout.gap;
+
+
+  const margin =
+    gap / 2;
+
+
+  /*
+   * Generate grid.
+   */
+
+  for (
+    let row = 0;
+    row < layout.rows;
+    row++
+  ) {
+
+    for (
+      let column = 0;
+      column < layout.columns;
+      column++
+    ) {
+
+      const x =
+        margin +
+        column *
+        (
+          PHOTO_WIDTH +
+          gap
+        );
+
+
+      const y =
+        margin +
+        row *
+        (
+          PHOTO_HEIGHT +
+          gap
+        );
+
+
+      /*
+       * Ignore slots outside
+       * the paper.
+       */
+
+      if (
+
+        x + PHOTO_WIDTH >
+          paper.width ||
+
+        y + PHOTO_HEIGHT >
+          paper.height
+
+      ) {
+
+        continue;
+
+      }
+
+
+      /*
+       * Slot background.
+       */
+
+      sheetContext.fillStyle =
+        layout.slotColor;
+
+
+      sheetContext.fillRect(
+
+        x,
+        y,
+
+        PHOTO_WIDTH,
+        PHOTO_HEIGHT
+
+      );
+
+
+      /*
+       * Photo.
+       */
+
+      sheetContext.drawImage(
+
+        croppedCanvas,
+
+        x,
+        y,
+
+        PHOTO_WIDTH,
+        PHOTO_HEIGHT
+
+      );
+
+
+      /*
+       * Cut border.
+       */
+
+      sheetContext.strokeStyle =
+        "#000000";
+
+
+      sheetContext.lineWidth =
+        5;
+
+
+      sheetContext.strokeRect(
+
+        x,
+        y,
+
+        PHOTO_WIDTH,
+        PHOTO_HEIGHT
+
+      );
+
+    }
+
+  }
+
+
+  /*
+   * First generation fits.
+   *
+   * Later changes preserve camera.
+   */
+
+  if (!hasGeneratedSheet) {
+
+    hasGeneratedSheet =
+      true;
+
+    fitSheet();
+
+  } else {
+
+    camera.zoom =
+      oldZoom;
+
+    camera.x =
+      oldX;
+
+    camera.y =
+      oldY;
+
+
+    updateZoom();
+
+    render();
+
+  }
+
+
+  updateStatus();
+
+}
+
+
+/* ============================================================
+   FIT
+   ============================================================ */
+
+function fitSheet() {
+
+  if (!sheetCanvas) {
+    return;
+  }
+
+
+  const padding =
+    100;
+
+
+  const zoomX =
+    (
+      viewportWidth -
+      padding * 2
+    ) /
+    sheetCanvas.width;
+
+
+  const zoomY =
+    (
+      viewportHeight -
+      padding * 2
+    ) /
+    sheetCanvas.height;
+
+
+  camera.zoom =
+    clamp(
+
+      Math.min(
+        zoomX,
+        zoomY
+      ),
+
+      MIN_ZOOM,
+      MAX_ZOOM
+
+    );
+
+
+  camera.x =
+    (
+      viewportWidth -
+      sheetCanvas.width *
+        camera.zoom
+    ) / 2;
+
+
+  camera.y =
+    (
+      viewportHeight -
+      sheetCanvas.height *
+        camera.zoom
+    ) / 2;
+
+
+  updateZoom();
+
+  render();
+
+}
+
+
+/* ============================================================
+   ACTUAL SIZE
+   ============================================================ */
+
+function actualSize() {
+
+  if (!sheetCanvas) {
+    return;
+  }
+
+
+  camera.zoom =
+    1;
+
+
+  camera.x =
+    (
+      viewportWidth -
+      sheetCanvas.width
+    ) / 2;
+
+
+  camera.y =
+    (
+      viewportHeight -
+      sheetCanvas.height
+    ) / 2;
+
+
+  updateZoom();
+
+  render();
+
+}
+
+
+/* ============================================================
+   LAYOUT EVENTS
+   ============================================================ */
+
+paperSize.addEventListener(
+  "change",
+  () => {
+
+    layout.paper =
+      paperSize.value;
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+rowsInput.addEventListener(
+  "input",
+  () => {
+
+    layout.rows =
+      clamp(
+        Number(
+          rowsInput.value
+        ) || 1,
+
+        1,
+        10
+      );
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+columnsInput.addEventListener(
+  "input",
+  () => {
+
+    layout.columns =
+      clamp(
+        Number(
+          columnsInput.value
+        ) || 1,
+
+        1,
+        10
+      );
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+slotColor.addEventListener(
+  "input",
+  () => {
+
+    layout.slotColor =
+      slotColor.value;
+
+
+    slotColorText.textContent =
+      slotColor.value;
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+portraitButton.addEventListener(
+  "click",
+  () => {
+
+    layout.landscape =
+      false;
+
+
+    portraitButton.classList.add(
+      "active"
+    );
+
+
+    landscapeButton.classList.remove(
+      "active"
+    );
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+landscapeButton.addEventListener(
+  "click",
+  () => {
+
+    layout.landscape =
+      true;
+
+
+    landscapeButton.classList.add(
+      "active"
+    );
+
+
+    portraitButton.classList.remove(
+      "active"
+    );
+
+
+    scheduleSheetUpdate();
+
+  }
+);
+
+
+/* ============================================================
+   LAYOUT PANEL
+   ============================================================ */
+
+function hideLayout() {
+
+  layoutPanel.classList.add(
+    "hidden"
+  );
+
+
+  showLayoutButton.classList.add(
+    "visible"
+  );
+
+}
+
+
+function showLayout() {
+
+  layoutPanel.classList.remove(
+    "hidden"
+  );
+
+
+  showLayoutButton.classList.remove(
+    "visible"
+  );
+
+}
+
+
+closeLayoutButton.addEventListener(
+  "click",
+  hideLayout
+);
+
+
+showLayoutButton.addEventListener(
+  "click",
+  showLayout
+);
+
+
+layoutButton.addEventListener(
+  "click",
+  () => {
+
+    if (
+      layoutPanel.classList.contains(
+        "hidden"
+      )
+    ) {
+
+      showLayout();
+
+    } else {
+
+      hideLayout();
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   DOWNLOAD
+   ============================================================ */
+
+downloadButton.addEventListener(
+  "click",
+  () => {
+
+    if (!sheetCanvas) {
+      return;
+    }
+
+
+    sheetCanvas.toBlob(
+      blob => {
+
+        if (!blob) {
+          return;
+        }
+
+
+        const url =
+          URL.createObjectURL(
+            blob
+          );
+
+
+        const link =
+          document.createElement(
+            "a"
+          );
+
+
+        link.href =
+          url;
+
+
+        link.download =
+          `rc-crop-print-${Date.now()}.png`;
+
+
+        link.click();
+
+
+        setTimeout(
+          () => {
+
+            URL.revokeObjectURL(
+              url
+            );
+
+          },
+          500
+        );
+
+      },
+      "image/png"
+    );
+
+  }
+);
+
+
+/* ============================================================
+   MOUSE PAN
+   ============================================================ */
+
+let mouseDragging =
+  false;
+
+let lastMouseX =
+  0;
+
+let lastMouseY =
+  0;
+
+let spacePressed =
+  false;
+
+
+window.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.code === "Space"
+    ) {
+
+      spacePressed =
+        true;
+
+      event.preventDefault();
+
+    }
+
+  }
+);
+
+
+window.addEventListener(
+  "keyup",
+  event => {
+
+    if (
+      event.code === "Space"
+    ) {
+
+      spacePressed =
+        false;
+
+    }
+
+  }
+);
+
+
+viewport.addEventListener(
+  "mousedown",
+  event => {
+
+    const canPan =
+      event.button === 1 ||
+      (
+        event.button === 0 &&
+        spacePressed
+      );
+
+
+    if (!canPan) {
+      return;
+    }
+
+
+    event.preventDefault();
+
+
+    markCanvasInteraction();
+
+
+    mouseDragging =
+      true;
+
+
+    lastMouseX =
+      event.clientX;
+
+
+    lastMouseY =
+      event.clientY;
+
+
+    viewport.classList.add(
+      "dragging"
+    );
+
+  }
+);
+
+
+window.addEventListener(
+  "mousemove",
+  event => {
+
+    if (!mouseDragging) {
+      return;
+    }
+
+
+    markCanvasInteraction();
+
+
+    camera.x +=
+      event.clientX -
+      lastMouseX;
+
+
+    camera.y +=
+      event.clientY -
+      lastMouseY;
+
+
+    lastMouseX =
+      event.clientX;
+
+
+    lastMouseY =
+      event.clientY;
+
+
+    render();
+
+  }
+);
+
+
+window.addEventListener(
+  "mouseup",
+  () => {
+
+    mouseDragging =
+      false;
+
+
+    viewport.classList.remove(
+      "dragging"
+    );
+
+  }
+);
+
+
+/* ============================================================
+   WHEEL
+   ============================================================ */
+
+viewport.addEventListener(
+  "wheel",
+  event => {
+
+    event.preventDefault();
+
+
+    markCanvasInteraction();
+
+
+    const rect =
+      viewport.getBoundingClientRect();
+
+
+    const x =
+      event.clientX -
+      rect.left;
+
+
+    const y =
+      event.clientY -
+      rect.top;
+
+
+    if (
+      event.ctrlKey ||
+      event.metaKey
+    ) {
+
+      zoomBy(
+
+        event.deltaY < 0
+          ? 1.1
+          : 1 / 1.1,
+
+        x,
+        y
+
+      );
+
+
+      return;
+
+    }
+
+
+    camera.x -=
+      event.deltaX;
+
+
+    camera.y -=
+      event.deltaY;
+
+
+    render();
+
+  },
+  {
+    passive: false
+  }
+);
+
+
+/* ============================================================
+   TOUCH / POINTER ENGINE
+   ============================================================ */
+
+const pointers =
+  new Map();
+
+
+let gesture = {
+
+  mode: null,
+
+  startDistance: 0,
+
+  startZoom: 1,
+
+  startCenter: null,
+
+  startCameraX: 0,
+
+  startCameraY: 0,
+
+  startWorldX: 0,
+
+  startWorldY: 0
+
+};
+
+
+function getPointers() {
+
+  return [
+    ...pointers.values()
+  ];
+
+}
+
+
+function pointerCenter(
+  a,
+  b
+) {
+
+  return {
+
+    x:
+      (
+        a.x +
+        b.x
+      ) / 2,
+
+    y:
+      (
+        a.y +
+        b.y
+      ) / 2
+
+  };
+
+}
+
+
+function pointerDistance(
+  a,
+  b
+) {
+
+  return Math.hypot(
+
+    b.x - a.x,
+
+    b.y - a.y
+
+  );
+
+}
+
+
+/* ============================================================
+   START TOUCH
+   ============================================================ */
+
+function startTouchGesture() {
+
+  const points =
+    getPointers();
+
+
+  /*
+   * One finger = pan.
+   */
+
+  if (
+    points.length === 1
+  ) {
+
+    const point =
+      points[0];
+
+
+    gesture = {
+
+      mode: "pan",
+
+      startDistance: 0,
+
+      startZoom:
+        camera.zoom,
+
+      startCenter: {
+
+        x:
+          point.x,
+
+        y:
+          point.y
+
+      },
+
+      startCameraX:
+        camera.x,
+
+      startCameraY:
+        camera.y,
+
+      startWorldX: 0,
+
+      startWorldY: 0
+
+    };
+
+
+    return;
+
+  }
+
+
+  /*
+   * Two fingers = pinch + pan.
+   */
+
+  if (
+    points.length === 2
+  ) {
+
+    const [a, b] =
+      points;
+
+
+    const center =
+      pointerCenter(
+        a,
+        b
+      );
+
+
+    const distance =
+      pointerDistance(
+        a,
+        b
+      );
+
+
+    const world =
+      screenToWorld(
+
+        center.x,
+
+        center.y
+
+      );
+
+
+    gesture = {
+
+      mode: "pinch",
+
+      startDistance:
+        distance,
+
+      startZoom:
+        camera.zoom,
+
+      startCenter:
+        center,
+
+      startCameraX:
+        camera.x,
+
+      startCameraY:
+        camera.y,
+
+      startWorldX:
+        world.x,
+
+      startWorldY:
+        world.y
+
+    };
+
+  }
+
+}
+
+
+/* ============================================================
+   POINTER DOWN
+   ============================================================ */
+
+viewport.addEventListener(
+  "pointerdown",
+  event => {
+
+    if (
+      event.pointerType === "mouse"
+    ) {
+
+      return;
+
+    }
+
+
+    event.preventDefault();
+
+
+    markCanvasInteraction();
+
+
+    viewport.setPointerCapture(
+      event.pointerId
+    );
+
+
+    pointers.set(
+      event.pointerId,
+      {
+
+        id:
+          event.pointerId,
+
+        x:
+          event.clientX,
+
+        y:
+          event.clientY
+
+      }
+    );
+
+
+    startTouchGesture();
+
+  },
+  {
+    passive: false
+  }
+);
+
+
+/* ============================================================
+   POINTER MOVE
+   ============================================================ */
+
+viewport.addEventListener(
+  "pointermove",
+  event => {
+
+    if (
+      event.pointerType === "mouse"
+    ) {
+
+      return;
+
+    }
+
+
+    event.preventDefault();
+
+
+    const pointer =
+      pointers.get(
+        event.pointerId
+      );
+
+
+    if (!pointer) {
+      return;
+    }
+
+
+    pointer.x =
+      event.clientX;
+
+
+    pointer.y =
+      event.clientY;
+
+
+    markCanvasInteraction();
+
+
+    const points =
+      getPointers();
+
+
+    /*
+     * One finger pan.
+     */
+
+    if (
+      points.length === 1 &&
+      gesture.mode === "pan"
+    ) {
+
+      const point =
+        points[0];
+
+
+      camera.x =
+        gesture.startCameraX +
+        (
+          point.x -
+          gesture.startCenter.x
+        );
+
+
+      camera.y =
+        gesture.startCameraY +
+        (
+          point.y -
+          gesture.startCenter.y
+        );
+
+
+      render();
+
+      return;
+
+    }
+
+
+    /*
+     * Two finger pan + zoom.
+     */
+
+    if (
+      points.length === 2 &&
+      gesture.mode === "pinch"
+    ) {
+
+      const [a, b] =
+        points;
+
+
+      const center =
+        pointerCenter(
+          a,
+          b
+        );
+
+
+      const distance =
+        pointerDistance(
+          a,
+          b
+        );
+
+
+      const scale =
+        distance /
+        gesture.startDistance;
+
+
+      camera.zoom =
+        clamp(
+
+          gesture.startZoom *
+            scale,
+
+          MIN_ZOOM,
+          MAX_ZOOM
+
+        );
+
+
+      /*
+       * Keep the same world coordinate
+       * under the finger midpoint.
+       */
+
+      camera.x =
+        center.x -
+        gesture.startWorldX *
+          camera.zoom;
+
+
+      camera.y =
+        center.y -
+        gesture.startWorldY *
+          camera.zoom;
+
+
+      updateZoom();
+
+      render();
+
+    }
+
+  },
+  {
+    passive: false
+  }
+);
+
+
+/* ============================================================
+   POINTER END
+   ============================================================ */
+
+function finishTouch(
+  event
+) {
+
+  if (
+    event.pointerType === "mouse"
+  ) {
+
+    return;
+
+  }
+
+
+  pointers.delete(
+    event.pointerId
+  );
+
+
+  /*
+   * If one finger remains,
+   * continue with pan.
+   */
+
+  if (
+    pointers.size === 1
+  ) {
+
+    const point =
+      getPointers()[0];
+
+
+    gesture = {
+
+      mode: "pan",
+
+      startDistance: 0,
+
+      startZoom:
+        camera.zoom,
+
+      startCenter: {
+
+        x:
+          point.x,
+
+        y:
+          point.y
+
+      },
+
+      startCameraX:
+        camera.x,
+
+      startCameraY:
+        camera.y,
+
+      startWorldX: 0,
+
+      startWorldY: 0
+
+    };
+
+
+    return;
+
+  }
+
+
+  gesture.mode =
+    null;
+
+}
+
+
+viewport.addEventListener(
+  "pointerup",
+  finishTouch
+);
+
+
+viewport.addEventListener(
+  "pointercancel",
+  finishTouch
+);
+
+
+/* ============================================================
+   KEYBOARD
+   ============================================================ */
+
+window.addEventListener(
+  "keydown",
+  event => {
+
+    const modifier =
+      event.ctrlKey ||
+      event.metaKey;
+
+
+    if (!modifier) {
+      return;
+    }
+
+
+    if (
+      event.key === "+" ||
+      event.key === "="
+    ) {
+
+      event.preventDefault();
+
+
+      zoomBy(
+
+        1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+
+
+    if (
+      event.key === "-"
+    ) {
+
+      event.preventDefault();
+
+
+      zoomBy(
+
+        1 / 1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+
+
+    if (
+      event.key === "0"
+    ) {
+
+      event.preventDefault();
+
+      fitSheet();
+
+    }
+
+
+    if (
+      event.key === "1"
+    ) {
+
+      event.preventDefault();
+
+      actualSize();
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+
+document
+  .getElementById("zoomIn")
+  .addEventListener(
+    "click",
+    () => {
+
+      zoomBy(
+
+        1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("zoomOut")
+  .addEventListener(
+    "click",
+    () => {
+
+      zoomBy(
+
+        1 / 1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("fitButton")
+  .addEventListener(
+    "click",
+    fitSheet
+  );
+
+
+document
+  .getElementById("actualButton")
+  .addEventListener(
+    "click",
+    actualSize
+  );
+
+
+/* ============================================================
+   DRAW SHEET
+   ============================================================ */
+
+function drawSheet() {
+
+  if (!sheetCanvas) {
+    return;
+  }
+
+
+  const position =
+    worldToScreen(
+      0,
+      0
+    );
+
+
+  const width =
+    sheetCanvas.width *
+    camera.zoom;
+
+
+  const height =
+    sheetCanvas.height *
+    camera.zoom;
+
+
+  ctx.save();
+
+
+  /*
+   * Paper shadow.
+   */
+
+  ctx.shadowColor =
+    "rgba(0,0,0,.25)";
+
+  ctx.shadowBlur =
+    24;
+
+  ctx.shadowOffsetY =
+    8;
+
+
+  ctx.fillStyle =
+    "#fff";
+
+
+  ctx.fillRect(
+
+    position.x,
+    position.y,
+
+    width,
+    height
+
+  );
+
+
+  ctx.shadowColor =
+    "transparent";
+
+
+  /*
+   * Print sheet.
+   */
+
+  ctx.drawImage(
+
+    sheetCanvas,
+
+    position.x,
+    position.y,
+
+    width,
+    height
+
+  );
+
+
+  ctx.strokeStyle =
+    "#9ca3af";
+
+  ctx.lineWidth =
+    1;
+
+
+  ctx.strokeRect(
+
+    position.x,
+    position.y,
+
+    width,
+    height
+
+  );
+
+
+  ctx.restore();
+
+}
+
+
+/* ============================================================
+   WORKSPACE GRID
+   ============================================================ */
+
+function drawWorkspaceGrid() {
+
+  const spacing =
+    32;
+
+
+  const topLeft =
+    screenToWorld(
+      0,
+      0
+    );
+
+
+  const bottomRight =
+    screenToWorld(
+      viewportWidth,
+      viewportHeight
+    );
+
+
+  const startX =
+    Math.floor(
+      topLeft.x /
+      spacing
+    ) *
+    spacing;
+
+
+  const endX =
+    Math.ceil(
+      bottomRight.x /
+      spacing
+    ) *
+    spacing;
+
+
+  const startY =
+    Math.floor(
+      topLeft.y /
+      spacing
+    ) *
+    spacing;
+
+
+  const endY =
+    Math.ceil(
+      bottomRight.y /
+      spacing
+    ) *
+    spacing;
+
+
+  ctx.save();
+
+
+  ctx.translate(
+    camera.x,
+    camera.y
+  );
+
+
+  ctx.scale(
+    camera.zoom,
+    camera.zoom
+  );
+
+
+  ctx.strokeStyle =
+    "rgba(100,116,139,.10)";
+
+
+  ctx.lineWidth =
+    1 /
+    camera.zoom;
+
+
+  for (
+    let x = startX;
+    x <= endX;
+    x += spacing
+  ) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      x,
+      startY
+    );
+
+    ctx.lineTo(
+      x,
+      endY
+    );
+
+    ctx.stroke();
+
+  }
+
+
+  for (
+    let y = startY;
+    y <= endY;
+    y += spacing
+  ) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      startX,
+      y
+    );
+
+    ctx.lineTo(
+      endX,
+      y
+    );
+
+    ctx.stroke();
+
+  }
+
+
+  ctx.restore();
+
+}
+
+
+/* ============================================================
+   RULER STEP
+   ============================================================ */
+
+function getRulerStep() {
+
+  const target =
+    85 /
+    camera.zoom;
+
+
+  const steps = [
+
+    18.75,
+    37.5,
+    75,
+    150,
+    300,
+    600,
+    1500,
+    3000
+
+  ];
+
+
+  for (
+    const step of steps
+  ) {
+
+    if (
+      step >= target
+    ) {
+
+      return step;
+
+    }
+
+  }
+
+
+  return 3000;
+
+}
+
+
+/* ============================================================
+   TOP RULER
+   ============================================================ */
+
+function drawTopRuler() {
+
+  const width =
+    viewportWidth - 32;
+
+
+  const height =
+    32;
+
+
+  const canvas =
+    document.createElement(
+      "canvas"
+    );
+
+
+  canvas.width =
+    width * dpr;
+
+
+  canvas.height =
+    height * dpr;
+
+
+  canvas.style.width =
+    `${width}px`;
+
+
+  canvas.style.height =
+    `${height}px`;
+
+
+  const ruler =
+    canvas.getContext("2d");
+
+
+  ruler.setTransform(
+
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+
+  );
+
+
+  ruler.fillStyle =
+    "#f8fafc";
+
+
+  ruler.fillRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  const step =
+    getRulerStep();
+
+
+  const start =
+    screenToWorld(
+      32,
+      0
+    ).x;
+
+
+  const end =
+    screenToWorld(
+      viewportWidth,
+      0
+    ).x;
+
+
+  const first =
+    Math.floor(
+      start / step
+    ) * step;
+
+
+  ruler.strokeStyle =
+    "#94a3b8";
+
+
+  ruler.fillStyle =
+    "#475569";
+
+
+  ruler.font =
+    "9px Arial";
+
+
+  ruler.textAlign =
+    "center";
+
+
+  ruler.textBaseline =
+    "top";
+
+
+  for (
+    let value = first;
+    value <= end;
+    value += step
+  ) {
+
+    const screen =
+      worldToScreen(
+        value,
+        0
+      );
+
+
+    const x =
+      screen.x - 32;
+
+
+    ruler.beginPath();
+
+
+    ruler.moveTo(
+      x,
+      32
+    );
+
+
+    ruler.lineTo(
+      x,
+      20
+    );
+
+
+    ruler.stroke();
+
+
+    const inches =
+      value / DPI;
+
+
+    ruler.fillText(
+
+      Number.isInteger(inches)
+        ? `${inches}"`
+        : `${inches.toFixed(2)}"`,
+
+      x,
+      3
+
+    );
+
+  }
+
+
+  topRuler.replaceChildren(
+    canvas
+  );
+
+}
+
+
+/* ============================================================
+   LEFT RULER
+   ============================================================ */
+
+function drawLeftRuler() {
+
+  const width =
+    32;
+
+
+  const height =
+    viewportHeight - 32;
+
+
+  const canvas =
+    document.createElement(
+      "canvas"
+    );
+
+
+  canvas.width =
+    width * dpr;
+
+
+  canvas.height =
+    height * dpr;
+
+
+  canvas.style.width =
+    `${width}px`;
+
+
+  canvas.style.height =
+    `${height}px`;
+
+
+  const ruler =
+    canvas.getContext("2d");
+
+
+  ruler.setTransform(
+
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+
+  );
+
+
+  ruler.fillStyle =
+    "#f8fafc";
+
+
+  ruler.fillRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  const step =
+    getRulerStep();
+
+
+  const start =
+    screenToWorld(
+      0,
+      32
+    ).y;
+
+
+  const end =
+    screenToWorld(
+      0,
+      viewportHeight
+    ).y;
+
+
+  const first =
+    Math.floor(
+      start / step
+    ) * step;
+
+
+  ruler.strokeStyle =
+    "#94a3b8";
+
+
+  ruler.fillStyle =
+    "#475569";
+
+
+  ruler.font =
+    "9px Arial";
+
+
+  ruler.textAlign =
+    "left";
+
+
+  ruler.textBaseline =
+    "middle";
+
+
+  for (
+    let value = first;
+    value <= end;
+    value += step
+  ) {
+
+    const screen =
+      worldToScreen(
+        0,
+        value
+      );
+
+
+    const y =
+      screen.y - 32;
+
+
+    ruler.beginPath();
+
+
+    ruler.moveTo(
+      32,
+      y
+    );
+
+
+    ruler.lineTo(
+      20,
+      y
+    );
+
+
+    ruler.stroke();
+
+
+    const inches =
+      value / DPI;
+
+
+    ruler.fillText(
+
+      Number.isInteger(inches)
+        ? `${inches}"`
+        : `${inches.toFixed(2)}"`,
+
+      3,
+      y
+
+    );
+
+  }
+
+
+  leftRuler.replaceChildren(
+    canvas
+  );
+
+}
+
+
+/* ============================================================
+   RULERS
+   ============================================================ */
+
+function drawRulers() {
+
+  drawTopRuler();
+
+  drawLeftRuler();
+
+}
+
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+
+function render() {
+
+  ctx.setTransform(
+
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+
+  );
+
+
+  ctx.clearRect(
+
+    0,
+    0,
+
+    viewportWidth,
+    viewportHeight
+
+  );
+
+
+  /*
+   * Workspace.
+   */
+
+  ctx.fillStyle =
+    "#d1d5db";
+
+
+  ctx.fillRect(
+
+    0,
+    0,
+
+    viewportWidth,
+    viewportHeight
+
+  );
+
+
+  /*
+   * Reference grid.
+   */
+
+  drawWorkspaceGrid();
+
+
+  /*
+   * Print sheet.
+   */
+
+  if (sheetCanvas) {
+
+    drawSheet();
+
+  } else {
+
+    ctx.fillStyle =
+      "#64748b";
+
+
+    ctx.font =
+      "16px Arial";
+
+
+    ctx.textAlign =
+      "center";
+
+
+    ctx.textBaseline =
+      "middle";
+
+
+    ctx.fillText(
+
+      "Upload an image to begin",
+
+      viewportWidth / 2,
+
+      viewportHeight / 2
+
+    );
+
+  }
+
+
+  /*
+   * Rulers remain fixed.
+   */
+
+  drawRulers();
+
+}
+
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+function updateStatus() {
+
+  if (!sheetCanvas) {
+    return;
+  }
+
+
+  const paper =
+    getPaper();
+
+
+  status.textContent =
+    `${layout.paper} · ${
+      layout.landscape
+        ? "Landscape"
+        : "Portrait"
+    } · ${
+      layout.rows
+    } × ${
+      layout.columns
+    } · ${
+      paper.width
+    } × ${
+      paper.height
+    } px`;
+
+}
+
+
+/* ============================================================
+   INITIALIZE
+   ============================================================ */
+
+resizeViewport();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,2598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  />
+
+  <title>Image Grid Canvas</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+
+      overflow: hidden;
+
+      font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+      background: #d1d5db;
+    }
+
+    body {
+      overscroll-behavior: none;
+    }
+
+    /* =========================================================
+       APP
+       ========================================================= */
+
+    #app {
+      position: fixed;
+      inset: 0;
+
+      width: 100%;
+      height: 100dvh;
+
+      overflow: hidden;
+    }
+
+
+    /* =========================================================
+       VIEWPORT
+       ========================================================= */
+
+    #viewport {
+      position: absolute;
+
+      inset: 0;
+
+      overflow: hidden;
+
+      background: #e5e7eb;
+
+      touch-action: none;
+
+      cursor: grab;
+
+      user-select: none;
+    }
+
+    #viewport.dragging {
+      cursor: grabbing;
+    }
+
+
+    /* =========================================================
+       MAIN CANVAS
+       ========================================================= */
+
+    #canvas {
+      position: absolute;
+
+      inset: 0;
+
+      width: 100%;
+      height: 100%;
+
+      display: block;
+
+      touch-action: none;
+    }
+
+
+    /* =========================================================
+       TOP RULER
+       ========================================================= */
+
+    #topRuler {
+      position: absolute;
+
+      z-index: 20;
+
+      top: 0;
+      left: 28px;
+      right: 0;
+
+      height: 28px;
+
+      background: rgba(248, 250, 252, 0.96);
+
+      border-bottom: 1px solid #cbd5e1;
+
+      pointer-events: none;
+    }
+
+
+    /* =========================================================
+       LEFT RULER
+       ========================================================= */
+
+    #leftRuler {
+      position: absolute;
+
+      z-index: 20;
+
+      top: 28px;
+      left: 0;
+      bottom: 0;
+
+      width: 28px;
+
+      background: rgba(248, 250, 252, 0.96);
+
+      border-right: 1px solid #cbd5e1;
+
+      pointer-events: none;
+    }
+
+
+    /* =========================================================
+       RULER CORNER
+       ========================================================= */
+
+    #rulerCorner {
+      position: absolute;
+
+      z-index: 21;
+
+      top: 0;
+      left: 0;
+
+      width: 28px;
+      height: 28px;
+
+      background: #f1f5f9;
+
+      border-right: 1px solid #cbd5e1;
+      border-bottom: 1px solid #cbd5e1;
+
+      pointer-events: none;
+    }
+
+
+    /* =========================================================
+       HEADER
+       ========================================================= */
+
+    .header {
+      position: absolute;
+
+      z-index: 30;
+
+      top: 40px;
+      left: 40px;
+
+      display: flex;
+      align-items: center;
+
+      gap: 8px;
+
+      padding: 8px;
+
+      border: 1px solid #d1d5db;
+      border-radius: 9px;
+
+      background: rgba(255, 255, 255, 0.95);
+
+      box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+
+
+    .logo {
+      font-size: 13px;
+      font-weight: 700;
+
+      white-space: nowrap;
+    }
+
+
+    /* =========================================================
+       CONTROL PANEL
+       ========================================================= */
+
+    .panel {
+      position: absolute;
+
+      z-index: 30;
+
+      top: 40px;
+      right: 16px;
+
+      width: 190px;
+
+      padding: 12px;
+
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+
+      background: rgba(255, 255, 255, 0.96);
+
+      box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.14);
+    }
+
+
+    .panel-title {
+      margin-bottom: 10px;
+
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+
+    .field {
+      margin-bottom: 8px;
+    }
+
+
+    .field label {
+      display: block;
+
+      margin-bottom: 4px;
+
+      font-size: 11px;
+      font-weight: 600;
+
+      color: #4b5563;
+    }
+
+
+    .field input {
+      width: 100%;
+
+      height: 32px;
+
+      padding: 0 8px;
+
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+
+      outline: none;
+
+      font-size: 13px;
+    }
+
+
+    .field input:focus {
+      border-color: #2563eb;
+    }
+
+
+    .buttons {
+      display: flex;
+
+      gap: 6px;
+
+      margin-top: 10px;
+    }
+
+
+    button {
+      height: 32px;
+
+      padding: 0 9px;
+
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+
+      background: white;
+
+      color: #111827;
+
+      font-size: 12px;
+      font-weight: 600;
+
+      cursor: pointer;
+    }
+
+
+    button:hover {
+      background: #f3f4f6;
+    }
+
+
+    /* =========================================================
+       BOTTOM TOOLBAR
+       ========================================================= */
+
+    .toolbar {
+      position: absolute;
+
+      z-index: 30;
+
+      left: 50%;
+      bottom: 14px;
+
+      transform: translateX(-50%);
+
+      display: flex;
+      align-items: center;
+
+      gap: 6px;
+
+      padding: 7px;
+
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+
+      background: rgba(255, 255, 255, 0.96);
+
+      box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.14);
+    }
+
+
+    #zoomText {
+      min-width: 58px;
+
+      text-align: center;
+
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+
+    /* =========================================================
+       IMAGE INPUT
+       ========================================================= */
+
+    #fileInput {
+      display: none;
+    }
+
+
+    .uploadButton {
+      display: inline-flex;
+
+      align-items: center;
+      justify-content: center;
+
+      height: 32px;
+
+      padding: 0 10px;
+
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+
+      background: white;
+
+      font-size: 12px;
+      font-weight: 600;
+
+      cursor: pointer;
+    }
+
+
+    /* =========================================================
+       IMAGE INFO
+       ========================================================= */
+
+    .imageInfo {
+      position: absolute;
+
+      z-index: 30;
+
+      left: 40px;
+      bottom: 18px;
+
+      padding: 7px 10px;
+
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+
+      background: rgba(255, 255, 255, 0.94);
+
+      font-size: 11px;
+
+      pointer-events: none;
+    }
+
+
+    @media (max-width: 700px) {
+
+      .panel {
+        top: 84px;
+        right: 10px;
+
+        width: 150px;
+      }
+
+      .header {
+        top: 38px;
+        left: 38px;
+      }
+
+      .imageInfo {
+        display: none;
+      }
+
+    }
+
+  </style>
+</head>
+
+
+<body>
+
+<div id="app">
+
+  <!-- =======================================================
+       VIEWPORT
+       ======================================================== -->
+
+  <div id="viewport">
+
+    <canvas id="canvas"></canvas>
+
+  </div>
+
+
+  <!-- =======================================================
+       RULERS
+       ======================================================== -->
+
+  <div id="topRuler"></div>
+
+  <div id="leftRuler"></div>
+
+  <div id="rulerCorner"></div>
+
+
+  <!-- =======================================================
+       HEADER
+       ======================================================== -->
+
+  <div class="header">
+
+    <div class="logo">
+      Crop Grid Print
+    </div>
+
+    <label class="uploadButton">
+
+      Upload Image
+
+      <input
+        id="fileInput"
+        type="file"
+        accept="image/*"
+      />
+
+    </label>
+
+  </div>
+
+
+  <!-- =======================================================
+       GRID PANEL
+       ======================================================== -->
+
+  <div class="panel">
+
+    <div class="panel-title">
+      Grid
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Rows
+      </label>
+
+      <input
+        id="rows"
+        type="number"
+        min="1"
+        max="50"
+        value="3"
+      />
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Columns
+      </label>
+
+      <input
+        id="columns"
+        type="number"
+        min="1"
+        max="50"
+        value="3"
+      />
+
+    </div>
+
+
+    <div class="buttons">
+
+      <button id="applyGrid">
+        Apply
+      </button>
+
+      <button id="clearGrid">
+        Clear
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- =======================================================
+       IMAGE INFO
+       ======================================================== -->
+
+  <div
+    class="imageInfo"
+    id="imageInfo"
+  >
+    No image loaded
+  </div>
+
+
+  <!-- =======================================================
+       BOTTOM TOOLBAR
+       ======================================================== -->
+
+  <div class="toolbar">
+
+    <button id="zoomOut">
+      −
+    </button>
+
+    <span id="zoomText">
+      100%
+    </span>
+
+    <button id="zoomIn">
+      +
+    </button>
+
+    <button id="fit">
+      Fit
+    </button>
+
+    <button id="actual">
+      100%
+    </button>
+
+  </div>
+
+</div>
+
+
+<script>
+
+/* ============================================================
+   ELEMENTS
+   ============================================================ */
+
+const viewport =
+  document.getElementById("viewport");
+
+const canvas =
+  document.getElementById("canvas");
+
+const ctx =
+  canvas.getContext("2d");
+
+const fileInput =
+  document.getElementById("fileInput");
+
+const rowsInput =
+  document.getElementById("rows");
+
+const columnsInput =
+  document.getElementById("columns");
+
+const imageInfo =
+  document.getElementById("imageInfo");
+
+const zoomText =
+  document.getElementById("zoomText");
+
+const topRuler =
+  document.getElementById("topRuler");
+
+const leftRuler =
+  document.getElementById("leftRuler");
+
+
+/* ============================================================
+   DEVICE PIXEL RATIO
+   ============================================================ */
+
+let dpr =
+  window.devicePixelRatio || 1;
+
+
+/* ============================================================
+   VIEWPORT SIZE
+   ============================================================ */
+
+let viewportWidth = 0;
+let viewportHeight = 0;
+
+
+/* ============================================================
+   IMAGE
+   ============================================================ */
+
+let image = null;
+
+
+/* ============================================================
+   IMAGE DOCUMENT
+   ============================================================ */
+
+let documentWidth = 1200;
+let documentHeight = 800;
+
+
+/* ============================================================
+   GRID
+   ============================================================ */
+
+let gridRows = 3;
+let gridColumns = 3;
+let gridVisible = true;
+
+
+/* ============================================================
+   CAMERA
+   ============================================================ */
+
+const camera = {
+
+  x: 0,
+
+  y: 0,
+
+  zoom: 1
+
+};
+
+
+const MIN_ZOOM = 0.05;
+const MAX_ZOOM = 8;
+
+
+/* ============================================================
+   RESIZE
+   ============================================================ */
+
+function resize() {
+
+  dpr =
+    window.devicePixelRatio || 1;
+
+  viewportWidth =
+    window.innerWidth;
+
+  viewportHeight =
+    window.innerHeight;
+
+
+  canvas.width =
+    viewportWidth * dpr;
+
+  canvas.height =
+    viewportHeight * dpr;
+
+
+  canvas.style.width =
+    viewportWidth + "px";
+
+  canvas.style.height =
+    viewportHeight + "px";
+
+
+  render();
+
+}
+
+
+window.addEventListener(
+  "resize",
+  resize
+);
+
+
+/* ============================================================
+   SCREEN → WORLD
+   ============================================================ */
+
+function screenToWorld(
+  screenX,
+  screenY
+) {
+
+  return {
+
+    x:
+      (screenX - camera.x) /
+      camera.zoom,
+
+    y:
+      (screenY - camera.y) /
+      camera.zoom
+
+  };
+
+}
+
+
+/* ============================================================
+   WORLD → SCREEN
+   ============================================================ */
+
+function worldToScreen(
+  worldX,
+  worldY
+) {
+
+  return {
+
+    x:
+      worldX *
+        camera.zoom +
+      camera.x,
+
+    y:
+      worldY *
+        camera.zoom +
+      camera.y
+
+  };
+
+}
+
+
+/* ============================================================
+   ZOOM
+   ============================================================ */
+
+function zoomAt(
+  screenX,
+  screenY,
+  newZoom
+) {
+
+  newZoom =
+    Math.max(
+      MIN_ZOOM,
+      Math.min(
+        MAX_ZOOM,
+        newZoom
+      )
+    );
+
+
+  const worldPoint =
+    screenToWorld(
+      screenX,
+      screenY
+    );
+
+
+  camera.zoom =
+    newZoom;
+
+
+  camera.x =
+    screenX -
+    worldPoint.x *
+      camera.zoom;
+
+
+  camera.y =
+    screenY -
+    worldPoint.y *
+      camera.zoom;
+
+
+  updateZoomText();
+
+  render();
+
+}
+
+
+function changeZoom(
+  factor,
+  screenX,
+  screenY
+) {
+
+  zoomAt(
+
+    screenX,
+
+    screenY,
+
+    camera.zoom * factor
+
+  );
+
+}
+
+
+/* ============================================================
+   PAN
+   ============================================================ */
+
+function pan(
+  dx,
+  dy
+) {
+
+  camera.x += dx;
+  camera.y += dy;
+
+  render();
+
+}
+
+
+/* ============================================================
+   ZOOM TEXT
+   ============================================================ */
+
+function updateZoomText() {
+
+  zoomText.textContent =
+    Math.round(
+      camera.zoom * 100
+    ) + "%";
+
+}
+
+
+/* ============================================================
+   FIT IMAGE
+   ============================================================ */
+
+function fitImage() {
+
+  if (!image) {
+
+    return;
+
+  }
+
+
+  const padding = 100;
+
+
+  const availableWidth =
+    viewportWidth -
+    padding * 2;
+
+
+  const availableHeight =
+    viewportHeight -
+    padding * 2;
+
+
+  const scaleX =
+    availableWidth /
+    documentWidth;
+
+
+  const scaleY =
+    availableHeight /
+    documentHeight;
+
+
+  camera.zoom =
+    Math.min(
+      scaleX,
+      scaleY
+    );
+
+
+  camera.zoom =
+    Math.max(
+      MIN_ZOOM,
+      Math.min(
+        MAX_ZOOM,
+        camera.zoom
+      )
+    );
+
+
+  camera.x =
+    (viewportWidth -
+      documentWidth *
+      camera.zoom) / 2;
+
+
+  camera.y =
+    (viewportHeight -
+      documentHeight *
+      camera.zoom) / 2;
+
+
+  updateZoomText();
+
+  render();
+
+}
+
+
+/* ============================================================
+   ACTUAL SIZE
+   ============================================================ */
+
+function actualSize() {
+
+  if (!image) {
+
+    return;
+
+  }
+
+
+  camera.zoom = 1;
+
+
+  camera.x =
+    (viewportWidth -
+      documentWidth) / 2;
+
+
+  camera.y =
+    (viewportHeight -
+      documentHeight) / 2;
+
+
+  updateZoomText();
+
+  render();
+
+}
+
+
+/* ============================================================
+   IMAGE UPLOAD
+   ============================================================ */
+
+fileInput.addEventListener(
+  "change",
+  event => {
+
+    const file =
+      event.target.files[0];
+
+
+    if (!file) {
+
+      return;
+
+    }
+
+
+    const url =
+      URL.createObjectURL(file);
+
+
+    const img =
+      new Image();
+
+
+    img.onload = () => {
+
+      image = img;
+
+
+      documentWidth =
+        img.naturalWidth;
+
+      documentHeight =
+        img.naturalHeight;
+
+
+      imageInfo.textContent =
+        `${documentWidth} × ${documentHeight} px`;
+
+
+      fitImage();
+
+
+      URL.revokeObjectURL(url);
+
+    };
+
+
+    img.src = url;
+
+  }
+);
+
+
+/* ============================================================
+   GRID
+   ============================================================ */
+
+document
+  .getElementById("applyGrid")
+  .addEventListener(
+    "click",
+    () => {
+
+      gridRows =
+        Math.max(
+          1,
+          Math.min(
+            50,
+            Number(rowsInput.value) || 1
+          )
+        );
+
+
+      gridColumns =
+        Math.max(
+          1,
+          Math.min(
+            50,
+            Number(columnsInput.value) || 1
+          )
+        );
+
+
+      gridVisible = true;
+
+      render();
+
+    }
+  );
+
+
+document
+  .getElementById("clearGrid")
+  .addEventListener(
+    "click",
+    () => {
+
+      gridVisible = false;
+
+      render();
+
+    }
+  );
+
+
+/* ============================================================
+   MOUSE PAN
+   ============================================================ */
+
+let mouseDown = false;
+
+let lastMouseX = 0;
+let lastMouseY = 0;
+
+let spacePressed = false;
+
+
+window.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.code === "Space"
+    ) {
+
+      spacePressed = true;
+
+      event.preventDefault();
+
+    }
+
+  }
+);
+
+
+window.addEventListener(
+  "keyup",
+  event => {
+
+    if (
+      event.code === "Space"
+    ) {
+
+      spacePressed = false;
+
+    }
+
+  }
+);
+
+
+viewport.addEventListener(
+  "mousedown",
+  event => {
+
+    const canPan =
+      event.button === 1 ||
+      (
+        event.button === 0 &&
+        spacePressed
+      );
+
+
+    if (!canPan) {
+
+      return;
+
+    }
+
+
+    event.preventDefault();
+
+
+    mouseDown = true;
+
+
+    lastMouseX =
+      event.clientX;
+
+    lastMouseY =
+      event.clientY;
+
+
+    viewport.classList.add(
+      "dragging"
+    );
+
+  }
+);
+
+
+window.addEventListener(
+  "mousemove",
+  event => {
+
+    if (!mouseDown) {
+
+      return;
+
+    }
+
+
+    const dx =
+      event.clientX -
+      lastMouseX;
+
+
+    const dy =
+      event.clientY -
+      lastMouseY;
+
+
+    pan(
+      dx,
+      dy
+    );
+
+
+    lastMouseX =
+      event.clientX;
+
+    lastMouseY =
+      event.clientY;
+
+  }
+);
+
+
+window.addEventListener(
+  "mouseup",
+  () => {
+
+    mouseDown = false;
+
+    viewport.classList.remove(
+      "dragging"
+    );
+
+  }
+);
+
+
+/* ============================================================
+   MOUSE WHEEL
+   ============================================================
+
+   Ctrl/Cmd + Wheel → zoom
+
+   Normal wheel → pan
+
+   ============================================================ */
+
+viewport.addEventListener(
+  "wheel",
+  event => {
+
+    event.preventDefault();
+
+
+    const rect =
+      viewport.getBoundingClientRect();
+
+
+    const x =
+      event.clientX -
+      rect.left;
+
+
+    const y =
+      event.clientY -
+      rect.top;
+
+
+    if (
+      event.ctrlKey ||
+      event.metaKey
+    ) {
+
+      const factor =
+        event.deltaY < 0
+          ? 1.1
+          : 1 / 1.1;
+
+
+      changeZoom(
+        factor,
+        x,
+        y
+      );
+
+    }
+
+    else {
+
+      pan(
+        -event.deltaX,
+        -event.deltaY
+      );
+
+    }
+
+  },
+  {
+    passive: false
+  }
+);
+
+
+/* ============================================================
+   TOUCH / POINTER
+   ============================================================ */
+
+const pointers =
+  new Map();
+
+
+let pinchDistance = null;
+let previousPinchCenter = null;
+
+
+viewport.addEventListener(
+  "pointerdown",
+  event => {
+
+    if (
+      event.pointerType === "mouse"
+    ) {
+
+      return;
+
+    }
+
+
+    viewport.setPointerCapture(
+      event.pointerId
+    );
+
+
+    pointers.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY
+      }
+    );
+
+
+    if (
+      pointers.size === 2
+    ) {
+
+      const points =
+        [...pointers.values()];
+
+
+      pinchDistance =
+        getDistance(
+          points[0],
+          points[1]
+        );
+
+
+      previousPinchCenter =
+        getCenter(
+          points[0],
+          points[1]
+        );
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   POINTER MOVE
+   ============================================================ */
+
+viewport.addEventListener(
+  "pointermove",
+  event => {
+
+    if (
+      event.pointerType === "mouse"
+    ) {
+
+      return;
+
+    }
+
+
+    const pointer =
+      pointers.get(
+        event.pointerId
+      );
+
+
+    if (!pointer) {
+
+      return;
+
+    }
+
+
+    const oldX =
+      pointer.x;
+
+    const oldY =
+      pointer.y;
+
+
+    pointer.x =
+      event.clientX;
+
+    pointer.y =
+      event.clientY;
+
+
+    /*
+     * ONE FINGER
+     *
+     * Pan.
+     */
+
+    if (
+      pointers.size === 1
+    ) {
+
+      pan(
+
+        event.clientX - oldX,
+
+        event.clientY - oldY
+
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * TWO FINGERS
+     *
+     * Pan + pinch zoom.
+     */
+
+    if (
+      pointers.size === 2
+    ) {
+
+      const points =
+        [...pointers.values()];
+
+
+      const currentCenter =
+        getCenter(
+          points[0],
+          points[1]
+        );
+
+
+      const currentDistance =
+        getDistance(
+          points[0],
+          points[1]
+        );
+
+
+      /*
+       * Pan based on center movement.
+       */
+
+      if (
+        previousPinchCenter
+      ) {
+
+        camera.x +=
+          currentCenter.x -
+          previousPinchCenter.x;
+
+
+        camera.y +=
+          currentCenter.y -
+          previousPinchCenter.y;
+
+      }
+
+
+      /*
+       * Zoom around finger center.
+       */
+
+      if (
+        pinchDistance &&
+        pinchDistance > 0
+      ) {
+
+        const worldPoint =
+          screenToWorld(
+            currentCenter.x,
+            currentCenter.y
+          );
+
+
+        const ratio =
+          currentDistance /
+          pinchDistance;
+
+
+        const newZoom =
+          Math.max(
+            MIN_ZOOM,
+            Math.min(
+              MAX_ZOOM,
+              camera.zoom *
+                ratio
+            )
+          );
+
+
+        camera.zoom =
+          newZoom;
+
+
+        camera.x =
+          currentCenter.x -
+          worldPoint.x *
+            camera.zoom;
+
+
+        camera.y =
+          currentCenter.y -
+          worldPoint.y *
+            camera.zoom;
+
+      }
+
+
+      pinchDistance =
+        currentDistance;
+
+
+      previousPinchCenter = {
+        x: currentCenter.x,
+        y: currentCenter.y
+      };
+
+
+      updateZoomText();
+
+      render();
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   POINTER END
+   ============================================================ */
+
+function pointerEnd(event) {
+
+  pointers.delete(
+    event.pointerId
+  );
+
+
+  if (
+    pointers.size < 2
+  ) {
+
+    pinchDistance = null;
+
+    previousPinchCenter = null;
+
+  }
+
+}
+
+
+viewport.addEventListener(
+  "pointerup",
+  pointerEnd
+);
+
+
+viewport.addEventListener(
+  "pointercancel",
+  pointerEnd
+);
+
+
+/* ============================================================
+   DISTANCE
+   ============================================================ */
+
+function getDistance(
+  a,
+  b
+) {
+
+  const dx =
+    b.x - a.x;
+
+
+  const dy =
+    b.y - a.y;
+
+
+  return Math.sqrt(
+    dx * dx +
+    dy * dy
+  );
+
+}
+
+
+/* ============================================================
+   CENTER
+   ============================================================ */
+
+function getCenter(
+  a,
+  b
+) {
+
+  return {
+
+    x:
+      (a.x + b.x) / 2,
+
+    y:
+      (a.y + b.y) / 2
+
+  };
+
+}
+
+
+/* ============================================================
+   KEYBOARD SHORTCUTS
+   ============================================================ */
+
+window.addEventListener(
+  "keydown",
+  event => {
+
+    const modifier =
+      event.ctrlKey ||
+      event.metaKey;
+
+
+    if (
+      !modifier
+    ) {
+
+      return;
+
+    }
+
+
+    /*
+     * Zoom in
+     */
+
+    if (
+      event.key === "+" ||
+      event.key === "="
+    ) {
+
+      event.preventDefault();
+
+
+      changeZoom(
+
+        1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+
+
+    /*
+     * Zoom out
+     */
+
+    if (
+      event.key === "-"
+    ) {
+
+      event.preventDefault();
+
+
+      changeZoom(
+
+        1 / 1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+
+
+    /*
+     * Fit
+     */
+
+    if (
+      event.key === "0"
+    ) {
+
+      event.preventDefault();
+
+      fitImage();
+
+    }
+
+
+    /*
+     * Actual size
+     */
+
+    if (
+      event.key === "1"
+    ) {
+
+      event.preventDefault();
+
+      actualSize();
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+document
+  .getElementById("zoomIn")
+  .addEventListener(
+    "click",
+    () => {
+
+      changeZoom(
+
+        1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("zoomOut")
+  .addEventListener(
+    "click",
+    () => {
+
+      changeZoom(
+
+        1 / 1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("fit")
+  .addEventListener(
+    "click",
+    fitImage
+  );
+
+
+document
+  .getElementById("actual")
+  .addEventListener(
+    "click",
+    actualSize
+  );
+
+
+/* ============================================================
+   DRAW IMAGE
+   ============================================================ */
+
+function drawImage() {
+
+  if (!image) {
+
+    drawEmptyState();
+
+    return;
+
+  }
+
+
+  const position =
+    worldToScreen(
+      0,
+      0
+    );
+
+
+  const width =
+    documentWidth *
+    camera.zoom;
+
+
+  const height =
+    documentHeight *
+    camera.zoom;
+
+
+  ctx.drawImage(
+
+    image,
+
+    position.x,
+    position.y,
+
+    width,
+    height
+
+  );
+
+}
+
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+
+function drawEmptyState() {
+
+  ctx.save();
+
+
+  ctx.fillStyle =
+    "#64748b";
+
+
+  ctx.font =
+    "16px Arial";
+
+
+  ctx.textAlign =
+    "center";
+
+
+  ctx.textBaseline =
+    "middle";
+
+
+  ctx.fillText(
+
+    "Upload an image to begin",
+
+    viewportWidth / 2,
+
+    viewportHeight / 2
+
+  );
+
+
+  ctx.restore();
+
+}
+
+
+/* ============================================================
+   DRAW GRID
+   ============================================================ */
+
+function drawGrid() {
+
+  if (
+    !image ||
+    !gridVisible
+  ) {
+
+    return;
+
+  }
+
+
+  const cellWidth =
+    documentWidth /
+    gridColumns;
+
+
+  const cellHeight =
+    documentHeight /
+    gridRows;
+
+
+  ctx.save();
+
+
+  /*
+   * Grid line width stays visually
+   * consistent while zooming.
+   */
+
+  ctx.strokeStyle =
+    "#ef4444";
+
+
+  ctx.lineWidth = 1.5;
+
+
+  /*
+   * Vertical lines
+   */
+
+  for (
+    let column = 0;
+    column <= gridColumns;
+    column++
+  ) {
+
+    const worldX =
+      column *
+      cellWidth;
+
+
+    const start =
+      worldToScreen(
+        worldX,
+        0
+      );
+
+
+    const end =
+      worldToScreen(
+        worldX,
+        documentHeight
+      );
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+      start.x,
+      start.y
+    );
+
+
+    ctx.lineTo(
+      end.x,
+      end.y
+    );
+
+
+    ctx.stroke();
+
+  }
+
+
+  /*
+   * Horizontal lines
+   */
+
+  for (
+    let row = 0;
+    row <= gridRows;
+    row++
+  ) {
+
+    const worldY =
+      row *
+      cellHeight;
+
+
+    const start =
+      worldToScreen(
+        0,
+        worldY
+      );
+
+
+    const end =
+      worldToScreen(
+        documentWidth,
+        worldY
+      );
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+      start.x,
+      start.y
+    );
+
+
+    ctx.lineTo(
+      end.x,
+      end.y
+    );
+
+
+    ctx.stroke();
+
+  }
+
+
+  /*
+   * Cell numbers
+   */
+
+  ctx.font =
+    `${Math.max(
+      10,
+      13 * camera.zoom
+    )}px Arial`;
+
+
+  ctx.textAlign =
+    "center";
+
+
+  ctx.textBaseline =
+    "middle";
+
+
+  for (
+    let row = 0;
+    row < gridRows;
+    row++
+  ) {
+
+    for (
+      let column = 0;
+      column < gridColumns;
+      column++
+    ) {
+
+      const center =
+        worldToScreen(
+
+          column *
+            cellWidth +
+            cellWidth / 2,
+
+          row *
+            cellHeight +
+            cellHeight / 2
+
+        );
+
+
+      /*
+       * Don't render text when
+       * cells become too small.
+       */
+
+      if (
+        cellWidth *
+          camera.zoom <
+          45 ||
+        cellHeight *
+          camera.zoom <
+          30
+      ) {
+
+        continue;
+
+      }
+
+
+      ctx.fillStyle =
+        "rgba(255,255,255,0.75)";
+
+
+      ctx.fillText(
+
+        `${row + 1}:${column + 1}`,
+
+        center.x,
+
+        center.y
+
+      );
+
+    }
+
+  }
+
+
+  ctx.restore();
+
+}
+
+
+/* ============================================================
+   RULER
+   ============================================================
+
+   Ruler units are image pixels.
+
+   Later we can change this to:
+
+       inches
+       cm
+       mm
+
+   based on PPI/DPI.
+
+   ============================================================ */
+
+function drawRulers() {
+
+  drawTopRuler();
+
+  drawLeftRuler();
+
+}
+
+
+/* ============================================================
+   TOP RULER
+   ============================================================ */
+
+function drawTopRuler() {
+
+  const width =
+    viewportWidth - 28;
+
+
+  const height = 28;
+
+
+  const rulerCanvas =
+    document.createElement("canvas");
+
+
+  rulerCanvas.width =
+    width * dpr;
+
+  rulerCanvas.height =
+    height * dpr;
+
+
+  rulerCanvas.style.width =
+    width + "px";
+
+  rulerCanvas.style.height =
+    height + "px";
+
+
+  const rulerCtx =
+    rulerCanvas.getContext("2d");
+
+
+  rulerCtx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+
+
+  rulerCtx.fillStyle =
+    "#f8fafc";
+
+
+  rulerCtx.fillRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  /*
+   * Visible world range.
+   */
+
+  const leftWorld =
+    screenToWorld(
+      28,
+      0
+    ).x;
+
+
+  const rightWorld =
+    screenToWorld(
+      viewportWidth,
+      0
+    ).x;
+
+
+  /*
+   * Choose a reasonable ruler
+   * interval based on zoom.
+   */
+
+  const step =
+    getRulerStep();
+
+
+  const first =
+    Math.floor(
+      leftWorld / step
+    ) * step;
+
+
+  rulerCtx.strokeStyle =
+    "#94a3b8";
+
+
+  rulerCtx.fillStyle =
+    "#475569";
+
+
+  rulerCtx.font =
+    "9px Arial";
+
+
+  rulerCtx.textAlign =
+    "center";
+
+
+  rulerCtx.textBaseline =
+    "top";
+
+
+  for (
+    let value = first;
+    value <= rightWorld;
+    value += step
+  ) {
+
+    const screen =
+      worldToScreen(
+        value,
+        0
+      );
+
+
+    const x =
+      screen.x - 28;
+
+
+    rulerCtx.beginPath();
+
+
+    rulerCtx.moveTo(
+      x,
+      height
+    );
+
+
+    rulerCtx.lineTo(
+      x,
+      height - 10
+    );
+
+
+    rulerCtx.stroke();
+
+
+    rulerCtx.fillText(
+      Math.round(value),
+      x,
+      3
+    );
+
+  }
+
+
+  topRuler.innerHTML = "";
+
+  topRuler.appendChild(
+    rulerCanvas
+  );
+
+}
+
+
+/* ============================================================
+   LEFT RULER
+   ============================================================ */
+
+function drawLeftRuler() {
+
+  const width = 28;
+
+  const height =
+    viewportHeight - 28;
+
+
+  const rulerCanvas =
+    document.createElement("canvas");
+
+
+  rulerCanvas.width =
+    width * dpr;
+
+  rulerCanvas.height =
+    height * dpr;
+
+
+  rulerCanvas.style.width =
+    width + "px";
+
+  rulerCanvas.style.height =
+    height + "px";
+
+
+  const rulerCtx =
+    rulerCanvas.getContext("2d");
+
+
+  rulerCtx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+
+
+  rulerCtx.fillStyle =
+    "#f8fafc";
+
+
+  rulerCtx.fillRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  const topWorld =
+    screenToWorld(
+      0,
+      28
+    ).y;
+
+
+  const bottomWorld =
+    screenToWorld(
+      0,
+      viewportHeight
+    ).y;
+
+
+  const step =
+    getRulerStep();
+
+
+  const first =
+    Math.floor(
+      topWorld / step
+    ) * step;
+
+
+  rulerCtx.strokeStyle =
+    "#94a3b8";
+
+
+  rulerCtx.fillStyle =
+    "#475569";
+
+
+  rulerCtx.font =
+    "9px Arial";
+
+
+  rulerCtx.textAlign =
+    "left";
+
+
+  rulerCtx.textBaseline =
+    "middle";
+
+
+  for (
+    let value = first;
+    value <= bottomWorld;
+    value += step
+  ) {
+
+    const screen =
+      worldToScreen(
+        0,
+        value
+      );
+
+
+    const y =
+      screen.y - 28;
+
+
+    rulerCtx.beginPath();
+
+
+    rulerCtx.moveTo(
+      width,
+      y
+    );
+
+
+    rulerCtx.lineTo(
+      width - 10,
+      y
+    );
+
+
+    rulerCtx.stroke();
+
+
+    rulerCtx.fillText(
+      Math.round(value),
+      3,
+      y
+    );
+
+  }
+
+
+  leftRuler.innerHTML = "";
+
+  leftRuler.appendChild(
+    rulerCanvas
+  );
+
+}
+
+
+/* ============================================================
+   RULER STEP
+   ============================================================ */
+
+function getRulerStep() {
+
+  /*
+   * We want roughly 80-120 screen pixels
+   * between major ruler labels.
+   */
+
+  const targetScreenSpacing = 90;
+
+
+  const worldSpacing =
+    targetScreenSpacing /
+    camera.zoom;
+
+
+  const powers =
+    Math.pow(
+      10,
+      Math.floor(
+        Math.log10(
+          worldSpacing
+        )
+      )
+    );
+
+
+  const normalized =
+    worldSpacing /
+    powers;
+
+
+  let multiplier;
+
+
+  if (
+    normalized <= 1
+  ) {
+
+    multiplier = 1;
+
+  }
+
+  else if (
+    normalized <= 2
+  ) {
+
+    multiplier = 2;
+
+  }
+
+  else if (
+    normalized <= 5
+  ) {
+
+    multiplier = 5;
+
+  }
+
+  else {
+
+    multiplier = 10;
+
+  }
+
+
+  return multiplier * powers;
+
+}
+
+
+/* ============================================================
+   MAIN RENDER
+   ============================================================ */
+
+function render() {
+
+  /*
+   * Reset transform.
+   */
+
+  ctx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+
+
+  /*
+   * Clear.
+   */
+
+  ctx.clearRect(
+    0,
+    0,
+    viewportWidth,
+    viewportHeight
+  );
+
+
+  /*
+   * Workspace background.
+   */
+
+  ctx.fillStyle =
+    "#e5e7eb";
+
+
+  ctx.fillRect(
+    0,
+    0,
+    viewportWidth,
+    viewportHeight
+  );
+
+
+  /*
+   * Image.
+   */
+
+  drawImage();
+
+
+  /*
+   * Grid.
+   */
+
+  drawGrid();
+
+
+  /*
+   * Rulers.
+   */
+
+  drawRulers();
+
+}
+
+
+/* ============================================================
+   INITIALIZE
+   ============================================================ */
+
+resize();
+
+</script>
+
+</body>
+</html>

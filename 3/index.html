@@ -1,0 +1,3414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  />
+
+  <title>RC Crop Print — Canvas Prototype</title>
+
+  <style>
+    /* =========================================================
+       RESET
+       ========================================================= */
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+
+      overflow: hidden;
+
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+      background: #e5e7eb;
+    }
+
+    body {
+      overscroll-behavior: none;
+    }
+
+
+    /* =========================================================
+       APP / VIEWPORT
+       ========================================================= */
+
+    #app {
+      position: fixed;
+
+      inset: 0;
+
+      width: 100%;
+      height: 100dvh;
+
+      overflow: hidden;
+    }
+
+    #viewport {
+      position: absolute;
+
+      inset: 0;
+
+      overflow: hidden;
+
+      background: #d1d5db;
+
+      touch-action: none;
+
+      user-select: none;
+
+      cursor: grab;
+    }
+
+    #viewport.dragging {
+      cursor: grabbing;
+    }
+
+    #viewportCanvas {
+      position: absolute;
+
+      inset: 0;
+
+      display: block;
+
+      width: 100%;
+      height: 100%;
+
+      touch-action: none;
+    }
+
+
+    /* =========================================================
+       TOP RULER
+       ========================================================= */
+
+    #topRuler {
+      position: absolute;
+
+      z-index: 20;
+
+      top: 0;
+      left: 32px;
+      right: 0;
+
+      height: 32px;
+
+      overflow: hidden;
+
+      background: rgba(248, 250, 252, 0.96);
+
+      border-bottom: 1px solid #cbd5e1;
+
+      pointer-events: none;
+    }
+
+
+    /* =========================================================
+       LEFT RULER
+       ========================================================= */
+
+    #leftRuler {
+      position: absolute;
+
+      z-index: 20;
+
+      top: 32px;
+      left: 0;
+      bottom: 0;
+
+      width: 32px;
+
+      overflow: hidden;
+
+      background: rgba(248, 250, 252, 0.96);
+
+      border-right: 1px solid #cbd5e1;
+
+      pointer-events: none;
+    }
+
+
+    #rulerCorner {
+      position: absolute;
+
+      z-index: 30;
+
+      top: 0;
+      left: 0;
+
+      width: 32px;
+      height: 32px;
+
+      background: #f1f5f9;
+
+      border-right: 1px solid #cbd5e1;
+      border-bottom: 1px solid #cbd5e1;
+
+      pointer-events: none;
+    }
+
+
+    /* =========================================================
+       HEADER
+       ========================================================= */
+
+    .header {
+      position: absolute;
+
+      z-index: 50;
+
+      top: 44px;
+      left: 44px;
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+      max-width: calc(100vw - 88px);
+
+      padding: 7px;
+
+      background: rgba(255, 255, 255, 0.96);
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 9px;
+
+      box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .brand {
+      padding: 0 5px;
+
+      font-size: 13px;
+
+      font-weight: 700;
+
+      white-space: nowrap;
+    }
+
+
+    /* =========================================================
+       BUTTONS
+       ========================================================= */
+
+    button,
+    select,
+    input {
+      font: inherit;
+    }
+
+    button {
+      height: 34px;
+
+      padding: 0 10px;
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 7px;
+
+      background: #fff;
+
+      color: #111827;
+
+      font-size: 12px;
+
+      font-weight: 600;
+
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #f3f4f6;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+
+    .upload-button {
+      display: inline-flex;
+
+      align-items: center;
+      justify-content: center;
+
+      height: 34px;
+
+      padding: 0 10px;
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 7px;
+
+      background: #fff;
+
+      color: #111827;
+
+      font-size: 12px;
+
+      font-weight: 600;
+
+      cursor: pointer;
+
+      white-space: nowrap;
+    }
+
+    #sourceInput {
+      display: none;
+    }
+
+
+    /* =========================================================
+       SETTINGS PANEL
+       ========================================================= */
+
+    .settings {
+      position: absolute;
+
+      z-index: 50;
+
+      top: 44px;
+      right: 14px;
+
+      width: 210px;
+
+      padding: 12px;
+
+      background: rgba(255, 255, 255, 0.97);
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 10px;
+
+      box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.14);
+    }
+
+    .settings-title {
+      margin-bottom: 10px;
+
+      font-size: 13px;
+
+      font-weight: 700;
+    }
+
+    .field {
+      margin-bottom: 8px;
+    }
+
+    .field label {
+      display: block;
+
+      margin-bottom: 4px;
+
+      color: #4b5563;
+
+      font-size: 11px;
+
+      font-weight: 600;
+    }
+
+    .field select,
+    .field input[type="number"] {
+      width: 100%;
+
+      height: 32px;
+
+      padding: 0 8px;
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 6px;
+
+      background: white;
+
+      outline: none;
+
+      font-size: 12px;
+    }
+
+    .field select:focus,
+    .field input[type="number"]:focus {
+      border-color: #2563eb;
+    }
+
+    .two-fields {
+      display: grid;
+
+      grid-template-columns: 1fr 1fr;
+
+      gap: 7px;
+    }
+
+    .color-row {
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+    }
+
+    #slotColor {
+      width: 38px;
+      height: 32px;
+
+      padding: 2px;
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 6px;
+
+      background: white;
+
+      cursor: pointer;
+    }
+
+    .orientation {
+      display: flex;
+
+      gap: 6px;
+    }
+
+    .orientation button {
+      flex: 1;
+    }
+
+    .orientation button.active {
+      background: #111827;
+
+      color: white;
+
+      border-color: #111827;
+    }
+
+    #generateButton {
+      width: 100%;
+
+      margin-top: 4px;
+
+      background: #111827;
+
+      color: white;
+
+      border-color: #111827;
+    }
+
+
+    /* =========================================================
+       BOTTOM TOOLBAR
+       ========================================================= */
+
+    .toolbar {
+      position: absolute;
+
+      z-index: 50;
+
+      left: 50%;
+      bottom: 14px;
+
+      transform: translateX(-50%);
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 5px;
+
+      padding: 7px;
+
+      background: rgba(255, 255, 255, 0.96);
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 10px;
+
+      box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.14);
+
+      white-space: nowrap;
+    }
+
+    #zoomText {
+      min-width: 54px;
+
+      text-align: center;
+
+      font-size: 12px;
+
+      font-weight: 700;
+    }
+
+
+    /* =========================================================
+       STATUS
+       ========================================================= */
+
+    .status {
+      position: absolute;
+
+      z-index: 40;
+
+      left: 44px;
+      bottom: 16px;
+
+      padding: 7px 9px;
+
+      background: rgba(255, 255, 255, 0.94);
+
+      border: 1px solid #d1d5db;
+
+      border-radius: 7px;
+
+      color: #374151;
+
+      font-size: 11px;
+
+      pointer-events: none;
+    }
+
+
+    /* =========================================================
+       MOBILE
+       ========================================================= */
+
+    @media (max-width: 700px) {
+
+      .header {
+        top: 42px;
+
+        left: 40px;
+
+        right: 10px;
+
+        max-width: none;
+      }
+
+      .brand {
+        display: none;
+      }
+
+      .settings {
+        top: 92px;
+
+        right: 10px;
+
+        width: 180px;
+      }
+
+      .status {
+        display: none;
+      }
+
+      .toolbar {
+        bottom: 10px;
+
+        max-width: calc(100vw - 20px);
+
+        overflow-x: auto;
+
+        scrollbar-width: none;
+      }
+
+      .toolbar::-webkit-scrollbar {
+        display: none;
+      }
+
+    }
+
+  </style>
+</head>
+
+
+<body>
+
+<div id="app">
+
+  <!-- =======================================================
+       VIEWPORT
+       ======================================================== -->
+
+  <div id="viewport">
+
+    <canvas id="viewportCanvas"></canvas>
+
+  </div>
+
+
+  <!-- =======================================================
+       RULERS
+       ======================================================== -->
+
+  <div id="topRuler"></div>
+
+  <div id="leftRuler"></div>
+
+  <div id="rulerCorner"></div>
+
+
+  <!-- =======================================================
+       HEADER
+       ======================================================== -->
+
+  <div class="header">
+
+    <div class="brand">
+      RC Crop Print
+    </div>
+
+    <label class="upload-button">
+
+      Upload Image
+
+      <input
+        id="sourceInput"
+        type="file"
+        accept="image/jpeg,image/png,image/svg+xml"
+      >
+
+    </label>
+
+  </div>
+
+
+  <!-- =======================================================
+       SETTINGS
+       ======================================================== -->
+
+  <aside class="settings">
+
+    <div class="settings-title">
+      Print Layout
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Paper Size
+      </label>
+
+      <select id="paperSize">
+
+        <option value="A4">
+          A4
+        </option>
+
+        <option value="4x6">
+          4 × 6
+        </option>
+
+        <option value="5x7">
+          5 × 7
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Rows / Columns
+      </label>
+
+      <div class="two-fields">
+
+        <input
+          id="rows"
+          type="number"
+          min="1"
+          max="10"
+          value="3"
+        >
+
+        <input
+          id="columns"
+          type="number"
+          min="1"
+          max="10"
+          value="2"
+        >
+
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Photo Slot Background
+      </label>
+
+      <div class="color-row">
+
+        <input
+          id="slotColor"
+          type="color"
+          value="#ffffff"
+        >
+
+        <span id="slotColorText">
+          #ffffff
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>
+        Orientation
+      </label>
+
+      <div class="orientation">
+
+        <button
+          id="portraitButton"
+          class="active"
+        >
+          Portrait
+        </button>
+
+        <button
+          id="landscapeButton"
+        >
+          Landscape
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <button id="generateButton">
+      Generate Sheet
+    </button>
+
+  </aside>
+
+
+  <!-- =======================================================
+       STATUS
+       ======================================================== -->
+
+  <div
+    id="status"
+    class="status"
+  >
+    Upload an image
+  </div>
+
+
+  <!-- =======================================================
+       BOTTOM TOOLBAR
+       ======================================================== -->
+
+  <div class="toolbar">
+
+    <button id="zoomOut">
+      −
+    </button>
+
+    <span id="zoomText">
+      100%
+    </span>
+
+    <button id="zoomIn">
+      +
+    </button>
+
+    <button id="fitButton">
+      Fit
+    </button>
+
+    <button id="actualButton">
+      100%
+    </button>
+
+    <button id="downloadButton">
+      Download
+    </button>
+
+  </div>
+
+</div>
+
+
+<script>
+
+/* ============================================================
+   DOM
+   ============================================================ */
+
+const viewport =
+  document.getElementById("viewport");
+
+const viewportCanvas =
+  document.getElementById("viewportCanvas");
+
+const vctx =
+  viewportCanvas.getContext("2d");
+
+const topRuler =
+  document.getElementById("topRuler");
+
+const leftRuler =
+  document.getElementById("leftRuler");
+
+const sourceInput =
+  document.getElementById("sourceInput");
+
+const paperSizeInput =
+  document.getElementById("paperSize");
+
+const rowsInput =
+  document.getElementById("rows");
+
+const columnsInput =
+  document.getElementById("columns");
+
+const slotColorInput =
+  document.getElementById("slotColor");
+
+const slotColorText =
+  document.getElementById("slotColorText");
+
+const generateButton =
+  document.getElementById("generateButton");
+
+const portraitButton =
+  document.getElementById("portraitButton");
+
+const landscapeButton =
+  document.getElementById("landscapeButton");
+
+const zoomText =
+  document.getElementById("zoomText");
+
+const status =
+  document.getElementById("status");
+
+const downloadButton =
+  document.getElementById("downloadButton");
+
+
+/* ============================================================
+   DEVICE
+   ============================================================ */
+
+let dpr =
+  window.devicePixelRatio || 1;
+
+let viewportWidth = 0;
+
+let viewportHeight = 0;
+
+
+/* ============================================================
+   PRINT RESOLUTION
+   ============================================================
+
+   Same conceptual model as your existing implementation.
+
+   A4:
+       2480 × 3505
+
+   4×6:
+       1200 × 1800
+
+   5×7:
+       1500 × 2100
+
+   These correspond approximately to 300 DPI.
+
+   ============================================================ */
+
+const DPI = 300;
+
+
+/* ============================================================
+   PHOTO OUTPUT
+   ============================================================ */
+
+const PHOTO_WIDTH = 360;
+const PHOTO_HEIGHT = 450;
+
+
+/* ============================================================
+   PAPER SIZES
+   ============================================================ */
+
+const PAPER_SIZES = {
+
+  A4: {
+    width: 2480,
+    height: 3505,
+
+    inchesWidth: 8.267,
+    inchesHeight: 11.683
+  },
+
+  "4x6": {
+    width: 1200,
+    height: 1800,
+
+    inchesWidth: 4,
+    inchesHeight: 6
+  },
+
+  "5x7": {
+    width: 1500,
+    height: 2100,
+
+    inchesWidth: 5,
+    inchesHeight: 7
+  }
+
+};
+
+
+/* ============================================================
+   SOURCE IMAGE
+   ============================================================ */
+
+let sourceImage = null;
+
+
+/* ============================================================
+   CROPPED IMAGE
+   ============================================================
+
+   This represents the 360 × 450 cropped output.
+
+   ============================================================ */
+
+let croppedCanvas = null;
+
+
+/* ============================================================
+   FINAL PRINT SHEET
+   ============================================================ */
+
+let sheetCanvas = null;
+
+
+/* ============================================================
+   LAYOUT STATE
+   ============================================================ */
+
+const layout = {
+
+  paper: "A4",
+
+  rows: 3,
+
+  columns: 2,
+
+  landscape: false,
+
+  slotColor: "#ffffff",
+
+  gap: 40
+
+};
+
+
+/* ============================================================
+   CAMERA
+   ============================================================ */
+
+const camera = {
+
+  x: 0,
+
+  y: 0,
+
+  zoom: 1
+
+};
+
+
+const MIN_ZOOM = 0.05;
+
+const MAX_ZOOM = 8;
+
+
+/* ============================================================
+   RESIZE
+   ============================================================ */
+
+function resizeViewport() {
+
+  dpr =
+    window.devicePixelRatio || 1;
+
+  viewportWidth =
+    window.innerWidth;
+
+  viewportHeight =
+    window.innerHeight;
+
+
+  viewportCanvas.width =
+    viewportWidth * dpr;
+
+  viewportCanvas.height =
+    viewportHeight * dpr;
+
+  viewportCanvas.style.width =
+    `${viewportWidth}px`;
+
+  viewportCanvas.style.height =
+    `${viewportHeight}px`;
+
+
+  render();
+
+}
+
+
+window.addEventListener(
+  "resize",
+  resizeViewport
+);
+
+
+/* ============================================================
+   WORLD / SCREEN COORDINATES
+   ============================================================ */
+
+function worldToScreen(
+  x,
+  y
+) {
+
+  return {
+
+    x:
+      x * camera.zoom +
+      camera.x,
+
+    y:
+      y * camera.zoom +
+      camera.y
+
+  };
+
+}
+
+
+function screenToWorld(
+  x,
+  y
+) {
+
+  return {
+
+    x:
+      (x - camera.x) /
+      camera.zoom,
+
+    y:
+      (y - camera.y) /
+      camera.zoom
+
+  };
+
+}
+
+
+/* ============================================================
+   CAMERA ZOOM
+   ============================================================ */
+
+function zoomAt(
+  screenX,
+  screenY,
+  newZoom
+) {
+
+  newZoom =
+    Math.max(
+      MIN_ZOOM,
+      Math.min(
+        MAX_ZOOM,
+        newZoom
+      )
+    );
+
+
+  const worldPoint =
+    screenToWorld(
+      screenX,
+      screenY
+    );
+
+
+  camera.zoom =
+    newZoom;
+
+
+  camera.x =
+    screenX -
+    worldPoint.x *
+      camera.zoom;
+
+
+  camera.y =
+    screenY -
+    worldPoint.y *
+      camera.zoom;
+
+
+  updateZoomText();
+
+  render();
+
+}
+
+
+function zoomBy(
+  factor,
+  x,
+  y
+) {
+
+  zoomAt(
+
+    x,
+
+    y,
+
+    camera.zoom *
+      factor
+
+  );
+
+}
+
+
+function updateZoomText() {
+
+  zoomText.textContent =
+    `${Math.round(
+      camera.zoom * 100
+    )}%`;
+
+}
+
+
+/* ============================================================
+   GET CURRENT PAPER
+   ============================================================ */
+
+function getPaper() {
+
+  const base =
+    PAPER_SIZES[
+      layout.paper
+    ];
+
+
+  if (
+    layout.landscape
+  ) {
+
+    return {
+
+      width:
+        base.height,
+
+      height:
+        base.width,
+
+      inchesWidth:
+        base.inchesHeight,
+
+      inchesHeight:
+        base.inchesWidth
+
+    };
+
+  }
+
+
+  return base;
+
+}
+
+
+/* ============================================================
+   CREATE 360 × 450 CROP
+   ============================================================ */
+
+function createCrop() {
+
+  if (!sourceImage) {
+
+    return;
+
+  }
+
+
+  const sourceWidth =
+    sourceImage.naturalWidth;
+
+  const sourceHeight =
+    sourceImage.naturalHeight;
+
+
+  const targetRatio =
+    PHOTO_WIDTH /
+    PHOTO_HEIGHT;
+
+
+  const sourceRatio =
+    sourceWidth /
+    sourceHeight;
+
+
+  let cropWidth;
+
+  let cropHeight;
+
+  let cropX;
+
+  let cropY;
+
+
+  /*
+   * Center crop to 4:5.
+   */
+
+  if (
+    sourceRatio > targetRatio
+  ) {
+
+    cropHeight =
+      sourceHeight;
+
+    cropWidth =
+      sourceHeight *
+      targetRatio;
+
+    cropX =
+      (
+        sourceWidth -
+        cropWidth
+      ) / 2;
+
+    cropY = 0;
+
+  } else {
+
+    cropWidth =
+      sourceWidth;
+
+    cropHeight =
+      sourceWidth /
+      targetRatio;
+
+    cropX = 0;
+
+    cropY =
+      (
+        sourceHeight -
+        cropHeight
+      ) / 2;
+
+  }
+
+
+  croppedCanvas =
+    document.createElement(
+      "canvas"
+    );
+
+
+  croppedCanvas.width =
+    PHOTO_WIDTH;
+
+  croppedCanvas.height =
+    PHOTO_HEIGHT;
+
+
+  const cropCtx =
+    croppedCanvas.getContext(
+      "2d"
+    );
+
+
+  cropCtx.drawImage(
+
+    sourceImage,
+
+    cropX,
+    cropY,
+
+    cropWidth,
+    cropHeight,
+
+    0,
+    0,
+
+    PHOTO_WIDTH,
+    PHOTO_HEIGHT
+
+  );
+
+}
+
+
+/* ============================================================
+   GENERATE PRINT SHEET
+   ============================================================ */
+
+function generateSheet() {
+
+  if (!croppedCanvas) {
+
+    return;
+
+  }
+
+
+  const paper =
+    getPaper();
+
+
+  sheetCanvas =
+    document.createElement(
+      "canvas"
+    );
+
+
+  sheetCanvas.width =
+    paper.width;
+
+  sheetCanvas.height =
+    paper.height;
+
+
+  const ctx =
+    sheetCanvas.getContext(
+      "2d"
+    );
+
+
+  /*
+   * White paper.
+   */
+
+  ctx.fillStyle =
+    "#ffffff";
+
+  ctx.fillRect(
+
+    0,
+    0,
+
+    paper.width,
+    paper.height
+
+  );
+
+
+  /*
+   * Existing rc-crop-print logic:
+   *
+   * gap = 40
+   * margin = gap / 2
+   */
+
+  const gap =
+    layout.gap;
+
+  const margin =
+    gap / 2;
+
+
+  /*
+   * Repeated photo grid.
+   */
+
+  for (
+    let row = 0;
+    row < layout.rows;
+    row++
+  ) {
+
+    for (
+      let column = 0;
+      column < layout.columns;
+      column++
+    ) {
+
+      const x =
+        column *
+          (PHOTO_WIDTH + gap) +
+        margin;
+
+
+      const y =
+        row *
+          (PHOTO_HEIGHT + gap) +
+        margin;
+
+
+      /*
+       * Skip cells that overflow
+       * the paper.
+       */
+
+      if (
+        x + PHOTO_WIDTH >
+          paper.width ||
+
+        y + PHOTO_HEIGHT >
+          paper.height
+      ) {
+
+        continue;
+
+      }
+
+
+      /*
+       * Slot background.
+       */
+
+      ctx.fillStyle =
+        layout.slotColor;
+
+
+      ctx.fillRect(
+
+        x,
+        y,
+
+        PHOTO_WIDTH,
+        PHOTO_HEIGHT
+
+      );
+
+
+      /*
+       * Photo.
+       */
+
+      ctx.drawImage(
+
+        croppedCanvas,
+
+        x,
+        y,
+
+        PHOTO_WIDTH,
+        PHOTO_HEIGHT
+
+      );
+
+
+      /*
+       * Black border.
+       */
+
+      ctx.strokeStyle =
+        "#000000";
+
+
+      ctx.lineWidth = 5;
+
+
+      ctx.strokeRect(
+
+        x,
+        y,
+
+        PHOTO_WIDTH,
+        PHOTO_HEIGHT
+
+      );
+
+    }
+
+  }
+
+
+  /*
+   * Put sheet in viewport.
+   */
+
+  fitSheet();
+
+
+  updateStatus();
+
+}
+
+
+/* ============================================================
+   FIT SHEET
+   ============================================================ */
+
+function fitSheet() {
+
+  if (!sheetCanvas) {
+
+    return;
+
+  }
+
+
+  const padding = 100;
+
+
+  const availableWidth =
+    viewportWidth -
+    padding * 2;
+
+
+  const availableHeight =
+    viewportHeight -
+    padding * 2;
+
+
+  const zoomX =
+    availableWidth /
+    sheetCanvas.width;
+
+
+  const zoomY =
+    availableHeight /
+    sheetCanvas.height;
+
+
+  camera.zoom =
+    Math.min(
+      zoomX,
+      zoomY
+    );
+
+
+  camera.zoom =
+    Math.max(
+      MIN_ZOOM,
+      Math.min(
+        MAX_ZOOM,
+        camera.zoom
+      )
+    );
+
+
+  camera.x =
+    (
+      viewportWidth -
+      sheetCanvas.width *
+        camera.zoom
+    ) / 2;
+
+
+  camera.y =
+    (
+      viewportHeight -
+      sheetCanvas.height *
+        camera.zoom
+    ) / 2;
+
+
+  updateZoomText();
+
+  render();
+
+}
+
+
+/* ============================================================
+   ACTUAL SIZE
+   ============================================================ */
+
+function actualSize() {
+
+  if (!sheetCanvas) {
+
+    return;
+
+  }
+
+
+  camera.zoom = 1;
+
+
+  camera.x =
+    (
+      viewportWidth -
+      sheetCanvas.width
+    ) / 2;
+
+
+  camera.y =
+    (
+      viewportHeight -
+      sheetCanvas.height
+    ) / 2;
+
+
+  updateZoomText();
+
+  render();
+
+}
+
+
+/* ============================================================
+   PAN
+   ============================================================ */
+
+function pan(
+  dx,
+  dy
+) {
+
+  camera.x += dx;
+
+  camera.y += dy;
+
+  render();
+
+}
+
+
+/* ============================================================
+   UPLOAD SOURCE IMAGE
+   ============================================================ */
+
+sourceInput.addEventListener(
+  "change",
+  event => {
+
+    const file =
+      event.target.files[0];
+
+
+    if (!file) {
+
+      return;
+
+    }
+
+
+    const url =
+      URL.createObjectURL(
+        file
+      );
+
+
+    const image =
+      new Image();
+
+
+    image.onload = () => {
+
+      sourceImage =
+        image;
+
+
+      /*
+       * Create 360 × 450 output.
+       */
+
+      createCrop();
+
+
+      /*
+       * Generate initial sheet.
+       */
+
+      generateSheet();
+
+
+      status.textContent =
+        `${image.naturalWidth} × ${image.naturalHeight}px → 360 × 450px`;
+
+
+      URL.revokeObjectURL(
+        url
+      );
+
+    };
+
+
+    image.src =
+      url;
+
+  }
+);
+
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+
+paperSizeInput.addEventListener(
+  "change",
+  () => {
+
+    layout.paper =
+      paperSizeInput.value;
+
+  }
+);
+
+
+rowsInput.addEventListener(
+  "change",
+  () => {
+
+    layout.rows =
+      clamp(
+        Number(
+          rowsInput.value
+        ) || 1,
+
+        1,
+        10
+      );
+
+  }
+);
+
+
+columnsInput.addEventListener(
+  "change",
+  () => {
+
+    layout.columns =
+      clamp(
+        Number(
+          columnsInput.value
+        ) || 1,
+
+        1,
+        10
+      );
+
+  }
+);
+
+
+slotColorInput.addEventListener(
+  "input",
+  () => {
+
+    layout.slotColor =
+      slotColorInput.value;
+
+    slotColorText.textContent =
+      slotColorInput.value;
+
+  }
+);
+
+
+/* ============================================================
+   ORIENTATION
+   ============================================================ */
+
+portraitButton.addEventListener(
+  "click",
+  () => {
+
+    layout.landscape =
+      false;
+
+    portraitButton.classList.add(
+      "active"
+    );
+
+    landscapeButton.classList.remove(
+      "active"
+    );
+
+  }
+);
+
+
+landscapeButton.addEventListener(
+  "click",
+  () => {
+
+    layout.landscape =
+      true;
+
+    landscapeButton.classList.add(
+      "active"
+    );
+
+    portraitButton.classList.remove(
+      "active"
+    );
+
+  }
+);
+
+
+/* ============================================================
+   GENERATE
+   ============================================================ */
+
+generateButton.addEventListener(
+  "click",
+  () => {
+
+    if (!croppedCanvas) {
+
+      alert(
+        "Upload an image first."
+      );
+
+      return;
+
+    }
+
+
+    generateSheet();
+
+  }
+);
+
+
+/* ============================================================
+   DOWNLOAD
+   ============================================================ */
+
+downloadButton.addEventListener(
+  "click",
+  () => {
+
+    if (!sheetCanvas) {
+
+      return;
+
+    }
+
+
+    sheetCanvas.toBlob(
+      blob => {
+
+        if (!blob) {
+
+          return;
+
+        }
+
+
+        const url =
+          URL.createObjectURL(
+            blob
+          );
+
+
+        const link =
+          document.createElement(
+            "a"
+          );
+
+
+        link.href =
+          url;
+
+        link.download =
+          `IMG_${Date.now()}.png`;
+
+
+        link.click();
+
+
+        setTimeout(
+          () => {
+            URL.revokeObjectURL(
+              url
+            );
+          },
+          500
+        );
+
+      },
+      "image/png"
+    );
+
+  }
+);
+
+
+/* ============================================================
+   MOUSE PAN
+   ============================================================ */
+
+let mouseDragging = false;
+
+let lastMouseX = 0;
+
+let lastMouseY = 0;
+
+let spacePressed = false;
+
+
+window.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.code === "Space"
+    ) {
+
+      spacePressed = true;
+
+      event.preventDefault();
+
+    }
+
+  }
+);
+
+
+window.addEventListener(
+  "keyup",
+  event => {
+
+    if (
+      event.code === "Space"
+    ) {
+
+      spacePressed = false;
+
+    }
+
+  }
+);
+
+
+viewport.addEventListener(
+  "mousedown",
+  event => {
+
+    /*
+     * Middle mouse
+     * OR
+     * Space + left mouse
+     */
+
+    const canPan =
+      event.button === 1 ||
+      (
+        event.button === 0 &&
+        spacePressed
+      );
+
+
+    if (!canPan) {
+
+      return;
+
+    }
+
+
+    event.preventDefault();
+
+
+    mouseDragging = true;
+
+
+    lastMouseX =
+      event.clientX;
+
+
+    lastMouseY =
+      event.clientY;
+
+
+    viewport.classList.add(
+      "dragging"
+    );
+
+  }
+);
+
+
+window.addEventListener(
+  "mousemove",
+  event => {
+
+    if (!mouseDragging) {
+
+      return;
+
+    }
+
+
+    const dx =
+      event.clientX -
+      lastMouseX;
+
+
+    const dy =
+      event.clientY -
+      lastMouseY;
+
+
+    pan(
+      dx,
+      dy
+    );
+
+
+    lastMouseX =
+      event.clientX;
+
+
+    lastMouseY =
+      event.clientY;
+
+  }
+);
+
+
+window.addEventListener(
+  "mouseup",
+  () => {
+
+    mouseDragging =
+      false;
+
+
+    viewport.classList.remove(
+      "dragging"
+    );
+
+  }
+);
+
+
+/* ============================================================
+   MOUSE WHEEL
+   ============================================================ */
+
+viewport.addEventListener(
+  "wheel",
+  event => {
+
+    event.preventDefault();
+
+
+    const rect =
+      viewport.getBoundingClientRect();
+
+
+    const x =
+      event.clientX -
+      rect.left;
+
+
+    const y =
+      event.clientY -
+      rect.top;
+
+
+    /*
+     * Ctrl/Cmd + wheel
+     * = zoom.
+     */
+
+    if (
+      event.ctrlKey ||
+      event.metaKey
+    ) {
+
+      const factor =
+        event.deltaY < 0
+          ? 1.1
+          : 1 / 1.1;
+
+
+      zoomBy(
+        factor,
+        x,
+        y
+      );
+
+
+      return;
+
+    }
+
+
+    /*
+     * Normal wheel
+     * = pan.
+     */
+
+    pan(
+
+      -event.deltaX,
+
+      -event.deltaY
+
+    );
+
+  },
+  {
+    passive: false
+  }
+);
+
+
+/* ============================================================
+   TOUCH / PINCH
+   ============================================================ */
+
+const pointers =
+  new Map();
+
+
+let pinchDistance = null;
+
+let pinchCenter = null;
+
+
+viewport.addEventListener(
+  "pointerdown",
+  event => {
+
+    if (
+      event.pointerType === "mouse"
+    ) {
+
+      return;
+
+    }
+
+
+    viewport.setPointerCapture(
+      event.pointerId
+    );
+
+
+    pointers.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY
+      }
+    );
+
+
+    if (
+      pointers.size === 2
+    ) {
+
+      const points =
+        [...pointers.values()];
+
+
+      pinchDistance =
+        distance(
+          points[0],
+          points[1]
+        );
+
+
+      pinchCenter =
+        center(
+          points[0],
+          points[1]
+        );
+
+    }
+
+  }
+);
+
+
+viewport.addEventListener(
+  "pointermove",
+  event => {
+
+    if (
+      event.pointerType === "mouse"
+    ) {
+
+      return;
+
+    }
+
+
+    const pointer =
+      pointers.get(
+        event.pointerId
+      );
+
+
+    if (!pointer) {
+
+      return;
+
+    }
+
+
+    const oldX =
+      pointer.x;
+
+
+    const oldY =
+      pointer.y;
+
+
+    pointer.x =
+      event.clientX;
+
+
+    pointer.y =
+      event.clientY;
+
+
+    /*
+     * One finger:
+     * pan.
+     */
+
+    if (
+      pointers.size === 1
+    ) {
+
+      pan(
+
+        event.clientX -
+          oldX,
+
+        event.clientY -
+          oldY
+
+      );
+
+
+      return;
+
+    }
+
+
+    /*
+     * Two fingers:
+     * pan + pinch.
+     */
+
+    if (
+      pointers.size === 2
+    ) {
+
+      const points =
+        [...pointers.values()];
+
+
+      const newCenter =
+        center(
+          points[0],
+          points[1]
+        );
+
+
+      const newDistance =
+        distance(
+          points[0],
+          points[1]
+        );
+
+
+      /*
+       * Pan based on center.
+       */
+
+      if (pinchCenter) {
+
+        camera.x +=
+          newCenter.x -
+          pinchCenter.x;
+
+
+        camera.y +=
+          newCenter.y -
+          pinchCenter.y;
+
+      }
+
+
+      /*
+       * Zoom around pinch center.
+       */
+
+      if (
+        pinchDistance &&
+        pinchDistance > 0
+      ) {
+
+        const worldPoint =
+          screenToWorld(
+            newCenter.x,
+            newCenter.y
+          );
+
+
+        const factor =
+          newDistance /
+          pinchDistance;
+
+
+        camera.zoom =
+          clamp(
+            camera.zoom *
+              factor,
+
+            MIN_ZOOM,
+            MAX_ZOOM
+          );
+
+
+        camera.x =
+          newCenter.x -
+          worldPoint.x *
+            camera.zoom;
+
+
+        camera.y =
+          newCenter.y -
+          worldPoint.y *
+            camera.zoom;
+
+      }
+
+
+      pinchDistance =
+        newDistance;
+
+
+      pinchCenter = {
+        x: newCenter.x,
+        y: newCenter.y
+      };
+
+
+      updateZoomText();
+
+      render();
+
+    }
+
+  }
+);
+
+
+function releasePointer(event) {
+
+  pointers.delete(
+    event.pointerId
+  );
+
+
+  if (
+    pointers.size < 2
+  ) {
+
+    pinchDistance = null;
+
+    pinchCenter = null;
+
+  }
+
+}
+
+
+viewport.addEventListener(
+  "pointerup",
+  releasePointer
+);
+
+
+viewport.addEventListener(
+  "pointercancel",
+  releasePointer
+);
+
+
+/* ============================================================
+   KEYBOARD SHORTCUTS
+   ============================================================ */
+
+window.addEventListener(
+  "keydown",
+  event => {
+
+    const modifier =
+      event.ctrlKey ||
+      event.metaKey;
+
+
+    if (!modifier) {
+
+      return;
+
+    }
+
+
+    /*
+     * Ctrl/Cmd + +
+     */
+
+    if (
+      event.key === "+" ||
+      event.key === "="
+    ) {
+
+      event.preventDefault();
+
+
+      zoomBy(
+
+        1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+
+
+    /*
+     * Ctrl/Cmd + -
+     */
+
+    if (
+      event.key === "-"
+    ) {
+
+      event.preventDefault();
+
+
+      zoomBy(
+
+        1 / 1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+
+
+    /*
+     * Ctrl/Cmd + 0
+     */
+
+    if (
+      event.key === "0"
+    ) {
+
+      event.preventDefault();
+
+      fitSheet();
+
+    }
+
+
+    /*
+     * Ctrl/Cmd + 1
+     */
+
+    if (
+      event.key === "1"
+    ) {
+
+      event.preventDefault();
+
+      actualSize();
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+
+document
+  .getElementById("zoomIn")
+  .addEventListener(
+    "click",
+    () => {
+
+      zoomBy(
+
+        1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("zoomOut")
+  .addEventListener(
+    "click",
+    () => {
+
+      zoomBy(
+
+        1 / 1.2,
+
+        viewportWidth / 2,
+
+        viewportHeight / 2
+
+      );
+
+    }
+  );
+
+
+document
+  .getElementById("fitButton")
+  .addEventListener(
+    "click",
+    fitSheet
+  );
+
+
+document
+  .getElementById("actualButton")
+  .addEventListener(
+    "click",
+    actualSize
+  );
+
+
+/* ============================================================
+   DRAW SHEET
+   ============================================================ */
+
+function drawSheet() {
+
+  if (!sheetCanvas) {
+
+    return;
+
+  }
+
+
+  const position =
+    worldToScreen(
+      0,
+      0
+    );
+
+
+  const width =
+    sheetCanvas.width *
+    camera.zoom;
+
+
+  const height =
+    sheetCanvas.height *
+    camera.zoom;
+
+
+  /*
+   * Paper shadow.
+   */
+
+  vctx.save();
+
+
+  vctx.shadowColor =
+    "rgba(0,0,0,.25)";
+
+
+  vctx.shadowBlur =
+    24;
+
+
+  vctx.shadowOffsetY =
+    8;
+
+
+  vctx.fillStyle =
+    "#ffffff";
+
+
+  vctx.fillRect(
+
+    position.x,
+
+    position.y,
+
+    width,
+
+    height
+
+  );
+
+
+  vctx.shadowColor =
+    "transparent";
+
+
+  /*
+   * Draw actual generated sheet.
+   */
+
+  vctx.drawImage(
+
+    sheetCanvas,
+
+    position.x,
+
+    position.y,
+
+    width,
+
+    height
+
+  );
+
+
+  /*
+   * Paper border.
+
+   */
+
+  vctx.strokeStyle =
+    "#9ca3af";
+
+
+  vctx.lineWidth = 1;
+
+
+  vctx.strokeRect(
+
+    position.x,
+
+    position.y,
+
+    width,
+
+    height
+
+  );
+
+
+  vctx.restore();
+
+}
+
+
+/* ============================================================
+   DRAW EMPTY STATE
+   ============================================================ */
+
+function drawEmptyState() {
+
+  vctx.save();
+
+
+  vctx.fillStyle =
+    "#64748b";
+
+
+  vctx.font =
+    "16px Arial";
+
+
+  vctx.textAlign =
+    "center";
+
+
+  vctx.textBaseline =
+    "middle";
+
+
+  vctx.fillText(
+
+    "Upload an image to create a print sheet",
+
+    viewportWidth / 2,
+
+    viewportHeight / 2
+
+  );
+
+
+  vctx.restore();
+
+}
+
+
+/* ============================================================
+   RULER SCALE
+   ============================================================ */
+
+function getRulerStep() {
+
+  /*
+   * One world unit =
+   * one print-sheet pixel.
+   *
+   * 300 world pixels = 1 inch.
+   */
+
+  const pixelsPerInch =
+    DPI;
+
+
+  const targetScreenSpacing =
+    85;
+
+
+  const worldSpacing =
+    targetScreenSpacing /
+    camera.zoom;
+
+
+  const inches =
+    worldSpacing /
+    pixelsPerInch;
+
+
+  /*
+   * Nice physical intervals.
+   */
+
+  const candidates = [
+
+    1 / 16,
+    1 / 8,
+    1 / 4,
+    1 / 2,
+    1,
+    2,
+    5,
+    10
+
+  ];
+
+
+  for (
+    const candidate of candidates
+  ) {
+
+    if (
+      candidate *
+        pixelsPerInch >=
+      worldSpacing
+    ) {
+
+      return (
+        candidate *
+        pixelsPerInch
+      );
+
+    }
+
+  }
+
+
+  return (
+    Math.ceil(inches) *
+    pixelsPerInch
+  );
+
+}
+
+
+/* ============================================================
+   DRAW TOP RULER
+   ============================================================ */
+
+function drawTopRuler() {
+
+  const width =
+    viewportWidth - 32;
+
+
+  const height = 32;
+
+
+  const ruler =
+    document.createElement(
+      "canvas"
+    );
+
+
+  ruler.width =
+    width * dpr;
+
+
+  ruler.height =
+    height * dpr;
+
+
+  ruler.style.width =
+    `${width}px`;
+
+
+  ruler.style.height =
+    `${height}px`;
+
+
+  const ctx =
+    ruler.getContext("2d");
+
+
+  ctx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+
+
+  ctx.fillStyle =
+    "#f8fafc";
+
+
+  ctx.fillRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  const step =
+    getRulerStep();
+
+
+  const startWorld =
+    screenToWorld(
+      32,
+      0
+    ).x;
+
+
+  const endWorld =
+    screenToWorld(
+      viewportWidth,
+      0
+    ).x;
+
+
+  const first =
+    Math.floor(
+      startWorld / step
+    ) * step;
+
+
+  ctx.strokeStyle =
+    "#94a3b8";
+
+
+  ctx.fillStyle =
+    "#475569";
+
+
+  ctx.font =
+    "9px Arial";
+
+
+  ctx.textAlign =
+    "center";
+
+
+  ctx.textBaseline =
+    "top";
+
+
+  for (
+    let world = first;
+    world <= endWorld;
+    world += step
+  ) {
+
+    const screen =
+      worldToScreen(
+        world,
+        0
+      );
+
+
+    const x =
+      screen.x - 32;
+
+
+    /*
+     * Major tick.
+     */
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      x,
+      32
+    );
+
+    ctx.lineTo(
+      x,
+      20
+    );
+
+    ctx.stroke();
+
+
+    /*
+     * Inches.
+     */
+
+    const inches =
+      world / DPI;
+
+
+    let label;
+
+
+    if (
+      Number.isInteger(inches)
+    ) {
+
+      label =
+        `${inches}"`;
+
+    } else {
+
+      label =
+        `${inches.toFixed(2)}"`;
+
+    }
+
+
+    ctx.fillText(
+      label,
+      x,
+      3
+    );
+
+  }
+
+
+  topRuler.replaceChildren(
+    ruler
+  );
+
+}
+
+
+/* ============================================================
+   DRAW LEFT RULER
+   ============================================================ */
+
+function drawLeftRuler() {
+
+  const width = 32;
+
+
+  const height =
+    viewportHeight - 32;
+
+
+  const ruler =
+    document.createElement(
+      "canvas"
+    );
+
+
+  ruler.width =
+    width * dpr;
+
+
+  ruler.height =
+    height * dpr;
+
+
+  ruler.style.width =
+    `${width}px`;
+
+
+  ruler.style.height =
+    `${height}px`;
+
+
+  const ctx =
+    ruler.getContext("2d");
+
+
+  ctx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+
+
+  ctx.fillStyle =
+    "#f8fafc";
+
+
+  ctx.fillRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  const step =
+    getRulerStep();
+
+
+  const startWorld =
+    screenToWorld(
+      0,
+      32
+    ).y;
+
+
+  const endWorld =
+    screenToWorld(
+      0,
+      viewportHeight
+    ).y;
+
+
+  const first =
+    Math.floor(
+      startWorld / step
+    ) * step;
+
+
+  ctx.strokeStyle =
+    "#94a3b8";
+
+
+  ctx.fillStyle =
+    "#475569";
+
+
+  ctx.font =
+    "9px Arial";
+
+
+  ctx.textAlign =
+    "left";
+
+
+  ctx.textBaseline =
+    "middle";
+
+
+  for (
+    let world = first;
+    world <= endWorld;
+    world += step
+  ) {
+
+    const screen =
+      worldToScreen(
+        0,
+        world
+      );
+
+
+    const y =
+      screen.y - 32;
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      32,
+      y
+    );
+
+    ctx.lineTo(
+      20,
+      y
+    );
+
+    ctx.stroke();
+
+
+    const inches =
+      world / DPI;
+
+
+    let label;
+
+
+    if (
+      Number.isInteger(inches)
+    ) {
+
+      label =
+        `${inches}"`;
+
+    } else {
+
+      label =
+        `${inches.toFixed(2)}"`;
+
+    }
+
+
+    ctx.fillText(
+      label,
+      3,
+      y
+    );
+
+  }
+
+
+  leftRuler.replaceChildren(
+    ruler
+  );
+
+}
+
+
+/* ============================================================
+   RULERS
+   ============================================================ */
+
+function drawRulers() {
+
+  drawTopRuler();
+
+  drawLeftRuler();
+
+}
+
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+
+function render() {
+
+  /*
+   * Reset high-DPI transform.
+   */
+
+  vctx.setTransform(
+
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+
+  );
+
+
+  /*
+   * Clear.
+   */
+
+  vctx.clearRect(
+
+    0,
+    0,
+
+    viewportWidth,
+    viewportHeight
+
+  );
+
+
+  /*
+   * Workspace.
+   */
+
+  vctx.fillStyle =
+    "#d1d5db";
+
+
+  vctx.fillRect(
+
+    0,
+    0,
+
+    viewportWidth,
+    viewportHeight
+
+  );
+
+
+  /*
+   * Subtle workspace grid.
+   */
+
+  drawWorkspaceGrid();
+
+
+  /*
+   * Print sheet.
+   */
+
+  if (sheetCanvas) {
+
+    drawSheet();
+
+  } else {
+
+    drawEmptyState();
+
+  }
+
+
+  /*
+   * Rulers stay fixed.
+   */
+
+  drawRulers();
+
+}
+
+
+/* ============================================================
+   WORKSPACE GRID
+   ============================================================ */
+
+function drawWorkspaceGrid() {
+
+  const spacing = 32;
+
+
+  const topLeft =
+    screenToWorld(
+      0,
+      0
+    );
+
+
+  const bottomRight =
+    screenToWorld(
+      viewportWidth,
+      viewportHeight
+    );
+
+
+  const startX =
+    Math.floor(
+      topLeft.x /
+      spacing
+    ) * spacing;
+
+
+  const endX =
+    Math.ceil(
+      bottomRight.x /
+      spacing
+    ) * spacing;
+
+
+  const startY =
+    Math.floor(
+      topLeft.y /
+      spacing
+    ) * spacing;
+
+
+  const endY =
+    Math.ceil(
+      bottomRight.y /
+      spacing
+    ) * spacing;
+
+
+  vctx.save();
+
+
+  vctx.translate(
+    camera.x,
+    camera.y
+  );
+
+
+  vctx.scale(
+    camera.zoom,
+    camera.zoom
+  );
+
+
+  vctx.strokeStyle =
+    "rgba(100,116,139,.10)";
+
+
+  vctx.lineWidth =
+    1 /
+    camera.zoom;
+
+
+  for (
+    let x = startX;
+    x <= endX;
+    x += spacing
+  ) {
+
+    vctx.beginPath();
+
+    vctx.moveTo(
+      x,
+      startY
+    );
+
+    vctx.lineTo(
+      x,
+      endY
+    );
+
+    vctx.stroke();
+
+  }
+
+
+  for (
+    let y = startY;
+    y <= endY;
+    y += spacing
+  ) {
+
+    vctx.beginPath();
+
+    vctx.moveTo(
+      startX,
+      y
+    );
+
+    vctx.lineTo(
+      endX,
+      y
+    );
+
+    vctx.stroke();
+
+  }
+
+
+  vctx.restore();
+
+}
+
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+function updateStatus() {
+
+  if (!sheetCanvas) {
+
+    return;
+
+  }
+
+
+  const paper =
+    getPaper();
+
+
+  status.textContent =
+    `${layout.paper} · ${
+      layout.landscape
+        ? "Landscape"
+        : "Portrait"
+    } · ${
+      layout.rows
+    } × ${
+      layout.columns
+    } · ${
+      paper.width
+    } × ${
+      paper.height
+    } px`;
+
+}
+
+
+/* ============================================================
+   UTILITY
+   ============================================================ */
+
+function clamp(
+  value,
+  min,
+  max
+) {
+
+  return Math.max(
+    min,
+    Math.min(
+      max,
+      value
+    )
+  );
+
+}
+
+
+/* ============================================================
+   INITIALIZE
+   ============================================================ */
+
+resizeViewport();
+
+</script>
+
+</body>
+</html>
